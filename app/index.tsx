@@ -3,17 +3,18 @@ import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert } from "reac
 import { useRouter } from "expo-router";
 import { FlashList, type ListRenderItem } from "@shopify/flash-list";
 import { useActivities } from "../src/context/ActivitiesContext";
+import { useTheme } from "../src/context/ThemeContext";
 import type { Activity } from "../src/context/ActivitiesContext";
 import ActivityItem from "../src/components/ActivityItem";
 import EditModal from "../src/components/EditModal";
 
 const HomeScreen: React.FC = () => {
   const { activities, loading, deleteActivity, deleteAllActivities, updateActivity } = useActivities();
+  const { colors, toggleTheme, isDark } = useTheme();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
 
-  // Filter activities based on search
   const filteredActivities = useMemo(() => {
     if (!searchQuery.trim()) return activities;
     
@@ -28,7 +29,6 @@ const HomeScreen: React.FC = () => {
     });
   }, [activities, searchQuery]);
 
-  // Calculate statistics
   const stats = useMemo(() => {
     const totalSteps = activities.reduce((sum, act) => sum + act.steps, 0);
     const avgSteps = activities.length > 0 ? Math.round(totalSteps / activities.length) : 0;
@@ -84,8 +84,128 @@ const HomeScreen: React.FC = () => {
     />
   );
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    header: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      paddingHorizontal: 16,
+      paddingTop: 8,
+    },
+    themeButton: {
+      padding: 8,
+    },
+    themeIcon: {
+      fontSize: 24,
+    },
+    statsContainer: {
+      flexDirection: "row",
+      padding: 16,
+      gap: 12,
+    },
+    statBox: {
+      flex: 1,
+      backgroundColor: colors.cardBackground,
+      padding: 16,
+      borderRadius: 12,
+      alignItems: "center",
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    statValue: {
+      fontSize: 24,
+      fontWeight: "700",
+      color: colors.primary,
+      marginBottom: 4,
+    },
+    statLabel: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    searchInput: {
+      marginHorizontal: 16,
+      marginBottom: 12,
+      padding: 12,
+      backgroundColor: colors.inputBackground,
+      borderRadius: 8,
+      fontSize: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.text,
+    },
+    buttonRow: {
+      flexDirection: "row",
+      paddingHorizontal: 16,
+      marginBottom: 12,
+      gap: 12,
+    },
+    actionButton: {
+      flex: 1,
+      padding: 14,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    addButton: {
+      backgroundColor: colors.primary,
+    },
+    addButtonText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: 16,
+    },
+    deleteAllButton: {
+      backgroundColor: colors.danger,
+    },
+    deleteAllButtonText: {
+      color: "#fff",
+      fontWeight: "600",
+      fontSize: 16,
+    },
+    message: {
+      marginTop: 40,
+      fontSize: 16,
+      textAlign: "center",
+      color: colors.textSecondary,
+    },
+    emptyContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      paddingHorizontal: 32,
+    },
+    emptyText: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 8,
+    },
+    emptySubtext: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: "center",
+    },
+    listContainer: {
+      flex: 1,
+      paddingHorizontal: 16,
+    },
+  });
+
   return (
     <View style={styles.container}>
+      {/* Theme Toggle */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={toggleTheme} style={styles.themeButton}>
+          <Text style={styles.themeIcon}>{isDark ? "☀️" : "🌙"}</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Header with Stats */}
       <View style={styles.statsContainer}>
         <View style={styles.statBox}>
@@ -106,6 +226,7 @@ const HomeScreen: React.FC = () => {
       <TextInput
         style={styles.searchInput}
         placeholder="Search by steps or date..."
+        placeholderTextColor={colors.textSecondary}
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
@@ -143,7 +264,6 @@ const HomeScreen: React.FC = () => {
         </View>
       ) : (
         <View style={styles.listContainer}>
-          
           <FlashList<Activity>
             data={filteredActivities}
             renderItem={renderItem}
@@ -162,105 +282,5 @@ const HomeScreen: React.FC = () => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
-  },
-  statsContainer: {
-    flexDirection: "row",
-    padding: 16,
-    gap: 12,
-  },
-  statBox: {
-    flex: 1,
-    backgroundColor: "#fff",
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: "#007AFF",
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
-  },
-  searchInput: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    padding: 12,
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: "#ddd",
-  },
-  buttonRow: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    gap: 12,
-  },
-  actionButton: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  addButton: {
-    backgroundColor: "#007AFF",
-  },
-  addButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  deleteAllButton: {
-    backgroundColor: "#FF3B30",
-  },
-  deleteAllButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  message: {
-    marginTop: 40,
-    fontSize: 16,
-    textAlign: "center",
-    color: "#666",
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 32,
-  },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 8,
-  },
-  emptySubtext: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
-  },
-  listContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-});
 
 export default HomeScreen;

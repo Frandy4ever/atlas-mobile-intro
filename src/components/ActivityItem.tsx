@@ -1,6 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
+import { useTheme } from "../context/ThemeContext";
 import type { Activity } from "../context/ActivitiesContext";
 
 interface ActivityItemProps {
@@ -10,6 +11,8 @@ interface ActivityItemProps {
 }
 
 const ActivityItem: React.FC<ActivityItemProps> = ({ item, onDelete, onEdit }) => {
+  const { colors } = useTheme();
+  
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
     return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { 
@@ -35,27 +38,59 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ item, onDelete, onEdit }) =
 
   const renderRightActions = () => (
     <TouchableOpacity
-      style={styles.deleteButton}
+      style={[styles.deleteButton, { backgroundColor: colors.danger }]}
       onPress={handleDelete}
     >
       <Text style={styles.deleteButtonText}>Delete</Text>
     </TouchableOpacity>
   );
 
+  const dynamicStyles = StyleSheet.create({
+    activityItem: {
+      backgroundColor: colors.cardBackground,
+      marginBottom: 8,
+      borderRadius: 12,
+      shadowColor: colors.shadow,
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    iconContainer: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: colors.iconBackground,
+      justifyContent: "center",
+      alignItems: "center",
+      marginRight: 12,
+    },
+    stepsText: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 4,
+    },
+    dateText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+    },
+  });
+
   return (
     <Swipeable renderRightActions={renderRightActions}>
       <TouchableOpacity 
-        style={styles.activityItem}
+        style={dynamicStyles.activityItem}
         onPress={() => onEdit(item)}
         activeOpacity={0.7}
       >
         <View style={styles.contentRow}>
-          <View style={styles.iconContainer}>
+          <View style={dynamicStyles.iconContainer}>
             <Text style={styles.iconText}>👟</Text>
           </View>
           <View style={styles.textContainer}>
-            <Text style={styles.stepsText}>{item.steps.toLocaleString()} steps</Text>
-            <Text style={styles.dateText}>{formatDate(item.date)}</Text>
+            <Text style={dynamicStyles.stepsText}>{item.steps.toLocaleString()} steps</Text>
+            <Text style={dynamicStyles.dateText}>{formatDate(item.date)}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -64,29 +99,10 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ item, onDelete, onEdit }) =
 };
 
 const styles = StyleSheet.create({
-  activityItem: {
-    backgroundColor: "#fff",
-    marginBottom: 8,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
   contentRow: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-  },
-  iconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#E8F5E9",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
   },
   iconText: {
     fontSize: 24,
@@ -94,18 +110,7 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
   },
-  stepsText: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#1a1a1a",
-    marginBottom: 4,
-  },
-  dateText: {
-    fontSize: 14,
-    color: "#666",
-  },
   deleteButton: {
-    backgroundColor: "#FF3B30",
     justifyContent: "center",
     alignItems: "center",
     width: 80,

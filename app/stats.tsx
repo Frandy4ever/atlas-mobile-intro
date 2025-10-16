@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import { View, Text, StyleSheet, ScrollView, Dimensions } from "react-native";
-import { VictoryChart, VictoryLine, VictoryAxis, VictoryBar, VictoryPie } from "victory";
 import { useActivities } from "../src/context/ActivitiesContext";
 import { useTheme } from "../src/context/ThemeContext";
 
@@ -10,34 +9,30 @@ const StatsScreen: React.FC = () => {
   const { activities } = useActivities();
   const { colors } = useTheme();
 
-  const lineChartData = useMemo(() => {
-    return activities
-      .slice(0, 10)
-      .reverse()
-      .map((act, idx) => ({
-        x: idx + 1,
-        y: act.steps,
-        label: new Date(act.date * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      }));
-  }, [activities]);
-
-  const barChartData = useMemo(() => {
-    const grouped: { [key: string]: number } = {};
+  const stats = useMemo(() => {
+    if (activities.length === 0) return { total: 0, avg: 0, max: 0, min: 0 };
     
-    activities.forEach(act => {
-      const date = new Date(act.date * 1000).toLocaleDateString();
-      grouped[date] = (grouped[date] || 0) + act.steps;
-    });
-
-    return Object.entries(grouped)
-      .slice(0, 7)
-      .map(([date, steps]) => ({
-        x: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-        y: steps,
-      }));
+    const total = activities.reduce((sum, act) => sum + act.steps, 0);
+    const avg = Math.round(total / activities.length);
+    const max = Math.max(...activities.map(act => act.steps));
+    const min = Math.min(...activities.map(act => act.steps));
+    
+    return { total, avg, max, min };
   }, [activities]);
 
-  const pieChartData = useMemo(() => {
+  // Get last 7 activities for the bar chart
+  const recentActivities = useMemo(() => {
+    return activities.slice(0, 7).reverse();
+  }, [activities]);
+
+  // Calculate max for scaling bars
+  const maxSteps = useMemo(() => {
+    if (recentActivities.length === 0) return 1;
+    return Math.max(...recentActivities.map(act => act.steps));
+  }, [recentActivities]);
+
+  // Calculate step ranges for distribution
+  const distribution = useMemo(() => {
     const ranges = {
       low: 0,
       medium: 0,
@@ -52,36 +47,14 @@ const StatsScreen: React.FC = () => {
       else ranges.veryHigh++;
     });
 
+    const total = activities.length || 1;
     return [
-      { x: "0-2K", y: ranges.low, color: "#FF6B6B" },
-      { x: "2K-5K", y: ranges.medium, color: "#4ECDC4" },
-      { x: "5K-10K", y: ranges.high, color: "#45B7D1" },
-      { x: "10K+", y: ranges.veryHigh, color: "#96CEB4" },
-    ].filter(item => item.y > 0);
+      { label: "0-2K", count: ranges.low, percent: (ranges.low / total) * 100, color: "#FF6B6B" },
+      { label: "2K-5K", count: ranges.medium, percent: (ranges.medium / total) * 100, color: "#4ECDC4" },
+      { label: "5K-10K", count: ranges.high, percent: (ranges.high / total) * 100, color: "#45B7D1" },
+      { label: "10K+", count: ranges.veryHigh, percent: (ranges.veryHigh / total) * 100, color: "#96CEB4" },
+    ].filter(item => item.count > 0);
   }, [activities]);
-
-  const stats = useMemo(() => {
-    if (activities.length === 0) return { total: 0, avg: 0, max: 0, min: 0 };
-    
-    const total = activities.reduce((sum, act) => sum + act.steps, 0);
-    const avg = Math.round(total / activities.length);
-    const max = Math.max(...activities.map(act => act.steps));
-    const min = Math.min(...activities.map(act => act.steps));
-    
-    return { total, avg, max, min };
-  }, [activities]);
-
-  const axisStyle = {
-    axis: { stroke: colors.text },
-    tickLabels: { fontSize: 10, fill: colors.text, angle: -45, textAnchor: "end" },
-    grid: { stroke: colors.border, strokeDasharray: "3,3" },
-  };
-
-  const dependentAxisStyle = {
-    axis: { stroke: colors.text },
-    tickLabels: { fontSize: 10, fill: colors.text },
-    grid: { stroke: colors.border, strokeDasharray: "3,3" },
-  };
 
   const styles = StyleSheet.create({
     container: {
@@ -148,28 +121,81 @@ const StatsScreen: React.FC = () => {
       fontSize: 18,
       fontWeight: "600",
       color: colors.text,
-      marginBottom: 12,
+      marginBottom: 16,
     },
-    pieChartContainer: {
+    barChartContainer: {
+      height: 200,
+      flexDirection: "row",
+      alignItems: "flex-end",
+      justifyContent: "space-around",
+      paddingHorizontal: 8,
+    },
+    barWrapper: {
+      flex: 1,
       alignItems: "center",
+      marginHorizontal: 4,
     },
-    legendContainer: {
-      marginTop: 12,
+    bar: {
+      width: "100%",
+      backgroundColor: colors.primary,
+      borderTopLeftRadius: 4,
+      borderTopRightRadius: 4,
+      minHeight: 4,
     },
-    legendItem: {
+    barLabel: {
+      fontSize: 10,
+      color: colors.textSecondary,
+      marginTop: 8,
+      textAlign: "center",
+    },
+    barValue: {
+      fontSize: 10,
+      color: colors.text,
+      fontWeight: "600",
+      marginBottom: 4,
+    },
+    distributionItem: {
       flexDirection: "row",
       alignItems: "center",
-      marginBottom: 8,
+      marginBottom: 12,
+      paddingVertical: 8,
     },
-    legendColor: {
-      width: 16,
-      height: 16,
-      borderRadius: 8,
-      marginRight: 8,
+    distributionColor: {
+      width: 20,
+      height: 20,
+      borderRadius: 4,
+      marginRight: 12,
     },
-    legendText: {
+    distributionInfo: {
+      flex: 1,
+    },
+    distributionLabel: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.text,
+      marginBottom: 2,
+    },
+    distributionCount: {
       fontSize: 14,
       color: colors.textSecondary,
+    },
+    distributionPercent: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: colors.primary,
+      minWidth: 50,
+      textAlign: "right",
+    },
+    progressBar: {
+      height: 8,
+      backgroundColor: colors.border,
+      borderRadius: 4,
+      marginTop: 8,
+      overflow: "hidden",
+    },
+    progressFill: {
+      height: "100%",
+      borderRadius: 4,
     },
   });
 
@@ -184,6 +210,7 @@ const StatsScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container}>
+      {/* Summary Cards */}
       <View style={styles.summaryContainer}>
         <View style={styles.summaryCard}>
           <Text style={styles.summaryValue}>{stats.total.toLocaleString()}</Text>
@@ -206,59 +233,52 @@ const StatsScreen: React.FC = () => {
         </View>
       </View>
 
-      {lineChartData.length > 0 && (
+      {/* Bar Chart - Recent Activities */}
+      {recentActivities.length > 0 && (
         <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Steps Over Time</Text>
-          <VictoryChart width={width - 32} height={250}>
-            <VictoryAxis style={axisStyle} tickFormat={(t) => String(t)} />
-            <VictoryAxis dependentAxis style={dependentAxisStyle} tickFormat={(t) => String(t)} />
-            <VictoryLine
-              data={lineChartData}
-              style={{ data: { stroke: colors.primary, strokeWidth: 3 } }}
-              animate={{ duration: 1000, onLoad: { duration: 500 } }}
-            />
-          </VictoryChart>
+          <Text style={styles.chartTitle}>Recent Activities</Text>
+          <View style={styles.barChartContainer}>
+            {recentActivities.map((activity, index) => {
+              const heightPercent = (activity.steps / maxSteps) * 100;
+              const date = new Date(activity.date * 1000);
+              const dateLabel = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+              
+              return (
+                <View key={index} style={styles.barWrapper}>
+                  <Text style={styles.barValue}>{(activity.steps / 1000).toFixed(1)}K</Text>
+                  <View style={[styles.bar, { height: `${Math.max(heightPercent, 2)}%` }]} />
+                  <Text style={styles.barLabel}>{dateLabel}</Text>
+                </View>
+              );
+            })}
+          </View>
         </View>
       )}
 
-      {barChartData.length > 0 && (
-        <View style={styles.chartContainer}>
-          <Text style={styles.chartTitle}>Daily Steps Comparison</Text>
-          <VictoryChart width={width - 32} height={250} domainPadding={{ x: 20 }}>
-            <VictoryAxis style={axisStyle} tickFormat={(t) => String(t)} />
-            <VictoryAxis dependentAxis style={dependentAxisStyle} tickFormat={(t) => String(t)} />
-            <VictoryBar
-              data={barChartData}
-              style={{ data: { fill: "#4ECDC4" } }}
-              animate={{ duration: 1000, onLoad: { duration: 500 } }}
-            />
-          </VictoryChart>
-        </View>
-      )}
-
-      {pieChartData.length > 0 && (
+      {/* Distribution */}
+      {distribution.length > 0 && (
         <View style={styles.chartContainer}>
           <Text style={styles.chartTitle}>Activity Distribution</Text>
-          <View style={styles.pieChartContainer}>
-            <VictoryPie
-              data={pieChartData}
-              colorScale={pieChartData.map(d => d.color)}
-              width={width - 32}
-              height={300}
-              style={{ labels: { fontSize: 14, fontWeight: "600", fill: colors.text } }}
-              animate={{ duration: 1000, onLoad: { duration: 500 } }}
-            />
-          </View>
-          <View style={styles.legendContainer}>
-            {pieChartData.map((item, idx) => (
-              <View key={idx} style={styles.legendItem}>
-                <View style={[styles.legendColor, { backgroundColor: item.color }]} />
-                <Text style={styles.legendText}>
-                  {item.x}: {item.y} activities
-                </Text>
+          {distribution.map((item, index) => (
+            <View key={index}>
+              <View style={styles.distributionItem}>
+                <View style={[styles.distributionColor, { backgroundColor: item.color }]} />
+                <View style={styles.distributionInfo}>
+                  <Text style={styles.distributionLabel}>{item.label}</Text>
+                  <Text style={styles.distributionCount}>{item.count} activities</Text>
+                </View>
+                <Text style={styles.distributionPercent}>{item.percent.toFixed(0)}%</Text>
               </View>
-            ))}
-          </View>
+              <View style={styles.progressBar}>
+                <View 
+                  style={[
+                    styles.progressFill, 
+                    { width: `${item.percent}%`, backgroundColor: item.color }
+                  ]} 
+                />
+              </View>
+            </View>
+          ))}
         </View>
       )}
     </ScrollView>

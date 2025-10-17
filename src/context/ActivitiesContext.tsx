@@ -1,247 +1,149 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { Platform } from "react-native";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import * as SQLite from "expo-sqlite";
 
-// -------------------------
-// Types
-// -------------------------
-export type Activity = {
+export interface Activity {
   id: number;
   steps: number;
-  date: number; // unix seconds
-};
+  date: number;
+}
 
-type ActivitiesContextType = {
+interface ActivitiesContextType {
   activities: Activity[];
   loading: boolean;
   addActivity: (steps: number, date?: number) => Promise<void>;
   updateActivity: (id: number, steps: number) => Promise<void>;
   deleteActivity: (id: number) => Promise<void>;
   deleteAllActivities: () => Promise<void>;
-  reload: () => Promise<void>;
-};
-
-// -------------------------
-// Constants
-// -------------------------
-const TABLE_NAME = "activities";
-const DB_NAME = "atlas_activities.db";
-
-// -------------------------
-// Open DB using the new API
-// -------------------------
-let db: SQLite.SQLiteDatabase | null = null;
-
-if (Platform.OS === "android" || Platform.OS === "ios") {
-  try {
-    db = SQLite.openDatabaseSync(DB_NAME);
-    console.log("Database opened successfully");
-  } catch (error) {
-    console.error("Failed to open database:", error);
-  }
-} else {
-  console.warn("SQLite not supported on this platform (Web). DB disabled.");
 }
 
-// -------------------------
-// Context
-// -------------------------
 const ActivitiesContext = createContext<ActivitiesContextType | undefined>(undefined);
 
-// -------------------------
-// Provider
-// -------------------------
-export const ActivitiesProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const ActivitiesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
+  const [db, setDb] = useState<SQLite.SQLiteDatabase | null>(null);
 
-  const ensureTable = useCallback(async () => {
-    if (!db) {
-      console.warn("Database not available");
-      return;
-    }
-
-    const createSql = `CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      steps INTEGER NOT NULL,
-      date INTEGER NOT NULL
-    );`;
-    
-    try {
-      await db.execAsync(createSql);
-      console.log("Table created/verified successfully");
-    } catch (err) {
-      console.error("CREATE TABLE error:", err);
-    }
+  useEffect(() => {
+    initDatabase();
   }, []);
 
-  const loadActivities = useCallback(async () => {
-    if (!db) {
-      console.warn("Database not available");
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
+  const initDatabase = async () => {
     try {
-      const result = await db.getAllAsync<Activity>(
-        `SELECT id, steps, date FROM ${TABLE_NAME} ORDER BY date DESC;`
+      const database = await SQLite.openDatabaseAsync("activities.db");
+      console.log("Database opened successfully");
+      setDb(database);
+
+      await database.execAsync(`
+        CREATE TABLE IF NOT EXISTS activities (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          steps INTEGER NOT NULL,
+          date INTEGER NOT NULL
+        );
+      `);
+      console.log("Table created/verified successfully");
+
+      await loadActivities(database);
+    } catch (error) {
+      console.error("Error initializing database:", error);
+      setLoading(false);
+    }
+  };
+
+  const loadActivities = async (database: SQLite.SQLiteDatabase) => {
+    try {
+      const result = await database.getAllAsync<Activity>(
+        "SELECT * FROM activities ORDER BY date DESC"
       );
-      
-      const parsed: Activity[] = result.map((r) => ({
-        id: Number(r.id),
-        steps: Number(r.steps),
-        date: Number(r.date),
-      }));
-      
-      setActivities(parsed);
-      console.log(`Loaded ${parsed.length} activities`);
-    } catch (err) {
-      console.error("SELECT error:", err);
-      setActivities([]);
+      console.log(`Loaded ${result.length} activities`);
+      setActivities(result);
+    } catch (error) {
+      console.error("Error loading activities:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const addActivity = useCallback(async (steps: number, date?: number) => {
-    if (!db) {
-      throw new Error("Database not available");
-    }
-
-    if (typeof steps !== "number" || steps < 0) {
-      throw new Error("Invalid steps value");
-    }
-
-    const ts = date ?? Math.floor(Date.now() / 1000);
-
+  const addActivity = async (steps: number, date?: number) => {
+    if (!db) return;
+    
     try {
-      const result = await db.runAsync(
-        `INSERT INTO ${TABLE_NAME} (steps, date) VALUES (?, ?);`,
-        [steps, ts]
+      const timestamp = date || Math.floor(Date.now() / 1000);
+      await db.runAsync(
+        "INSERT INTO activities (steps, date) VALUES (?, ?)",
+        steps,
+        timestamp
       );
-      
-      const insertedId = result.lastInsertRowId;
-      const newRow: Activity = { 
-        id: Number(insertedId), 
-        steps, 
-        date: ts 
-      };
-      
-      // Update state optimistically
-      setActivities(prev => [newRow, ...prev]);
       console.log(`Added activity with ${steps} steps`);
-    } catch (err) {
-      console.error("INSERT error:", err);
-      throw err;
+      await loadActivities(db);
+    } catch (error) {
+      console.error("Error adding activity:", error);
+      throw error;
     }
-  }, []);
+  };
 
-  const updateActivity = useCallback(async (id: number, steps: number) => {
-    if (!db) {
-      throw new Error("Database not available");
-    }
-
-    if (typeof steps !== "number" || steps < 0) {
-      throw new Error("Invalid steps value");
-    }
-
+  const updateActivity = async (id: number, steps: number) => {
+    if (!db) return;
+    
     try {
       await db.runAsync(
-        `UPDATE ${TABLE_NAME} SET steps = ? WHERE id = ?;`,
-        [steps, id]
-      );
-      
-      // Update state optimistically
-      setActivities(prev => 
-        prev.map(act => act.id === id ? { ...act, steps } : act)
+        "UPDATE activities SET steps = ? WHERE id = ?",
+        steps,
+        id
       );
       console.log(`Updated activity ${id} with ${steps} steps`);
-    } catch (err) {
-      console.error("UPDATE error:", err);
-      throw err;
+      await loadActivities(db);
+    } catch (error) {
+      console.error("Error updating activity:", error);
+      throw error;
     }
-  }, []);
+  };
 
-  const deleteActivity = useCallback(async (id: number) => {
-    if (!db) {
-      throw new Error("Database not available");
-    }
-
-    try {
-      await db.runAsync(
-        `DELETE FROM ${TABLE_NAME} WHERE id = ?;`,
-        [id]
-      );
-      
-      // Update state optimistically
-      setActivities(prev => prev.filter(act => act.id !== id));
-      console.log(`Deleted activity ${id}`);
-    } catch (err) {
-      console.error("DELETE error:", err);
-      throw err;
-    }
-  }, []);
-
-  const deleteAllActivities = useCallback(async () => {
-    if (!db) {
-      throw new Error("Database not available");
-    }
-
-    try {
-      await db.runAsync(`DELETE FROM ${TABLE_NAME};`);
-      setActivities([]);
-      console.log("Deleted all activities");
-    } catch (err) {
-      console.error("DELETE ALL error:", err);
-      throw err;
-    }
-  }, []);
-
-  const reload = useCallback(async () => {
-    await loadActivities();
-  }, [loadActivities]);
-
-  useEffect(() => {
-    let mounted = true;
+  const deleteActivity = async (id: number) => {
+    if (!db) return;
     
-    (async () => {
-      try {
-        await ensureTable();
-        if (!mounted) return;
-        await loadActivities();
-      } catch (err) {
-        console.error("DB init error:", err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    })();
+    try {
+      await db.runAsync("DELETE FROM activities WHERE id = ?", id);
+      console.log(`Deleted activity ${id}`);
+      await loadActivities(db);
+    } catch (error) {
+      console.error("Error deleting activity:", error);
+      throw error;
+    }
+  };
 
-    return () => {
-      mounted = false;
-    };
-  }, [ensureTable, loadActivities]);
+  const deleteAllActivities = async () => {
+    if (!db) return;
+    
+    try {
+      await db.runAsync("DELETE FROM activities");
+      console.log("Deleted all activities");
+      await loadActivities(db);
+    } catch (error) {
+      console.error("Error deleting all activities:", error);
+      throw error;
+    }
+  };
 
   return (
-    <ActivitiesContext.Provider value={{ 
-      activities, 
-      loading, 
-      addActivity, 
-      updateActivity,
-      deleteActivity,
-      deleteAllActivities,
-      reload 
-    }}>
+    <ActivitiesContext.Provider
+      value={{
+        activities,
+        loading,
+        addActivity,
+        updateActivity,
+        deleteActivity,
+        deleteAllActivities,
+      }}
+    >
       {children}
     </ActivitiesContext.Provider>
   );
 };
 
-// -------------------------
-// Hook
-// -------------------------
-export const useActivities = (): ActivitiesContextType => {
-  const ctx = useContext(ActivitiesContext);
-  if (!ctx) throw new Error("useActivities must be used within ActivitiesProvider");
-  return ctx;
+export const useActivities = () => {
+  const context = useContext(ActivitiesContext);
+  if (!context) {
+    throw new Error("useActivities must be used within ActivitiesProvider");
+  }
+  return context;
 };

@@ -36,8 +36,14 @@ const AddScreen: React.FC = () => {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      justifyContent: "center",
       padding: 20,
       backgroundColor: colors.background,
+    },
+    content: {
+      width: "100%",
+      maxWidth: 400,
+      alignSelf: "center",
     },
     label: {
       fontSize: 16,

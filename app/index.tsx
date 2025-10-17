@@ -1,32 +1,110 @@
-import React, { useState, useMemo } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert } from "react-native";
+import React, { useState, useMemo, useEffect } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { FlashList, type ListRenderItem } from "@shopify/flash-list";
 import { useActivities } from "../src/context/ActivitiesContext";
+import { useArchive } from "../src/context/ArchiveContext";
 import { useTheme } from "../src/context/ThemeContext";
+import { useAuth } from "../src/context/AuthContext";
 import type { Activity } from "../src/context/ActivitiesContext";
 import ActivityItem from "../src/components/ActivityItem";
 import EditModal from "../src/components/EditModal";
+import LoadingSkeleton from "../src/components/LoadingSkeleton";
 
 const HomeScreen: React.FC = () => {
   const { activities, loading, deleteActivity, deleteAllActivities, updateActivity } = useActivities();
-  const { colors, toggleTheme, isDark } = useTheme();
+  const { archiveActivity } = useArchive();
+  const { colors } = useTheme();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isAuthenticated, authLoading, router]);
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>Loading...</Text>
+      </View>
+    );
+  }
+
+  // If not authenticated, show loading (redirect will happen)
+  if (!isAuthenticated) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  // Helper function to count occurrences of a digit in a string
+  const countOccurrences = (str: string, digit: string): number => {
+    const regex = new RegExp(digit, 'g');
+    const matches = str.match(regex);
+    return matches ? matches.length : 0;
+  };
+
+  // Filter activities based on search with frequency + position hybrid
   const filteredActivities = useMemo(() => {
-    if (!searchQuery.trim()) return activities;
+    const trimmed = searchQuery.trim();
+    if (trimmed.length === 0) return activities;
     
-    const query = searchQuery.toLowerCase();
-    return activities.filter(activity => {
-      const stepsMatch = activity.steps.toString().includes(query);
-      const dateMatch = new Date(activity.date * 1000)
-        .toLocaleDateString()
-        .toLowerCase()
-        .includes(query);
-      return stepsMatch || dateMatch;
-    });
+    const query = trimmed.toLowerCase();
+    
+    // Check if query is numeric
+    const isNumericQuery = /^\d+$/.test(query);
+    
+    if (isNumericQuery) {
+      // For numeric queries, use frequency + position hybrid sorting
+      const filtered = activities.filter(activity => {
+        const stepsStr = activity.steps.toString();
+        return stepsStr.includes(query);
+      });
+      
+      return filtered.sort((a, b) => {
+        const aStr = a.steps.toString();
+        const bStr = b.steps.toString();
+        
+        // Count occurrences of the search digit
+        const aCount = countOccurrences(aStr, query);
+        const bCount = countOccurrences(bStr, query);
+        
+        // Primary sort: frequency (higher count first)
+        if (bCount !== aCount) {
+          return bCount - aCount;
+        }
+        
+        // Secondary sort: earliest position (lower index first)
+        const aIndex = aStr.indexOf(query);
+        const bIndex = bStr.indexOf(query);
+        
+        if (aIndex !== bIndex) {
+          return aIndex - bIndex;
+        }
+        
+        // Tertiary sort: preserve original order (by date)
+        return a.date - b.date;
+      });
+    } else {
+      // For non-numeric queries, filter by steps or date
+      return activities.filter(activity => {
+        const stepsMatch = activity.steps.toString().includes(query);
+        const date = new Date(activity.date * 1000);
+        const dateStr = date.toLocaleDateString().toLowerCase();
+        const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }).toLowerCase();
+        const dateMatch = dateStr.includes(query) || timeStr.includes(query);
+        return stepsMatch || dateMatch;
+      });
+    }
   }, [activities, searchQuery]);
 
   const stats = useMemo(() => {
@@ -36,9 +114,14 @@ const HomeScreen: React.FC = () => {
   }, [activities]);
 
   const handleDeleteAll = () => {
+    const isFiltered = searchQuery.trim().length > 0;
+    const itemCount = filteredActivities.length;
+    
     Alert.alert(
-      "Delete All Activities",
-      "Are you sure you want to delete all activities? This cannot be undone.",
+      isFiltered ? "Delete Search Results" : "Delete All Activities",
+      isFiltered 
+        ? `Are you sure you want to delete all ${itemCount} search result${itemCount !== 1 ? 's' : ''}? This cannot be undone.`
+        : "Are you sure you want to delete all activities? This cannot be undone.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -46,7 +129,15 @@ const HomeScreen: React.FC = () => {
           style: "destructive",
           onPress: async () => {
             try {
-              await deleteAllActivities();
+              if (isFiltered) {
+                // Delete only filtered activities
+                for (const activity of filteredActivities) {
+                  await deleteActivity(activity.id);
+                }
+              } else {
+                // Delete all activities
+                await deleteAllActivities();
+              }
             } catch (err) {
               Alert.alert("Error", "Failed to delete activities");
             }
@@ -68,6 +159,16 @@ const HomeScreen: React.FC = () => {
     setEditingActivity(activity);
   };
 
+  const handleArchive = async (activity: Activity) => {
+    try {
+      await archiveActivity(activity.id, activity.steps, activity.date);
+      await deleteActivity(activity.id);
+      Alert.alert("Success", "Activity archived successfully!");
+    } catch (err) {
+      Alert.alert("Error", "Failed to archive activity");
+    }
+  };
+
   const handleSaveEdit = async (id: number, steps: number) => {
     try {
       await updateActivity(id, steps);
@@ -81,184 +182,57 @@ const HomeScreen: React.FC = () => {
       item={item}
       onDelete={handleDelete}
       onEdit={handleEdit}
+      onArchive={handleArchive}
     />
   );
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    header: {
-      flexDirection: "row",
-      justifyContent: "flex-end",
-      paddingHorizontal: 16,
-      paddingTop: 8,
-    },
-    themeButton: {
-      padding: 8,
-    },
-    themeIcon: {
-      fontSize: 24,
-    },
-    statsContainer: {
-      flexDirection: "row",
-      padding: 16,
-      gap: 12,
-    },
-    statBox: {
-      flex: 1,
-      backgroundColor: colors.cardBackground,
-      padding: 16,
-      borderRadius: 12,
-      alignItems: "center",
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    statValue: {
-      fontSize: 24,
-      fontWeight: "700",
-      color: colors.primary,
-      marginBottom: 4,
-    },
-    statLabel: {
-      fontSize: 12,
-      color: colors.textSecondary,
-      textAlign: "center",
-    },
-    searchInput: {
-      marginHorizontal: 16,
-      marginBottom: 12,
-      padding: 12,
-      backgroundColor: colors.inputBackground,
-      borderRadius: 8,
-      fontSize: 16,
-      borderWidth: 1,
-      borderColor: colors.border,
-      color: colors.text,
-    },
-    buttonRow: {
-      flexDirection: "row",
-      paddingHorizontal: 16,
-      marginBottom: 12,
-      gap: 12,
-    },
-    actionButton: {
-      flex: 1,
-      padding: 14,
-      borderRadius: 8,
-      alignItems: "center",
-    },
-    addButton: {
-      backgroundColor: colors.primary,
-    },
-    addButtonText: {
-      color: "#fff",
-      fontWeight: "600",
-      fontSize: 16,
-    },
-    deleteAllButton: {
-      backgroundColor: colors.danger,
-    },
-    deleteAllButtonText: {
-      color: "#fff",
-      fontWeight: "600",
-      fontSize: 16,
-    },
-    message: {
-      marginTop: 40,
-      fontSize: 16,
-      textAlign: "center",
-      color: colors.textSecondary,
-    },
-    emptyContainer: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingHorizontal: 32,
-    },
-    emptyText: {
-      fontSize: 20,
-      fontWeight: "600",
-      color: colors.text,
-      marginBottom: 8,
-    },
-    emptySubtext: {
-      fontSize: 16,
-      color: colors.textSecondary,
-      textAlign: "center",
-    },
-    listContainer: {
-      flex: 1,
-      paddingHorizontal: 16,
-    },
-  });
-
   return (
-    <View style={styles.container}>
-      {/* Theme Toggle */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={toggleTheme} style={styles.themeButton}>
-          <Text style={styles.themeIcon}>{isDark ? "☀️" : "🌙"}</Text>
-        </TouchableOpacity>
-      </View>
-
+    <View style={[styles.mainContainer, { backgroundColor: colors.background }]}>
       {/* Header with Stats */}
       <View style={styles.statsContainer}>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.totalSteps.toLocaleString()}</Text>
-          <Text style={styles.statLabel}>Total Steps</Text>
+        <View style={[styles.statBox, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
+          <Text style={[styles.statValue, { color: colors.primary }]}>{stats.totalSteps.toLocaleString()}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Steps</Text>
         </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.avgSteps.toLocaleString()}</Text>
-          <Text style={styles.statLabel}>Avg Steps</Text>
+        <View style={[styles.statBox, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
+          <Text style={[styles.statValue, { color: colors.primary }]}>{stats.avgSteps.toLocaleString()}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Avg Steps</Text>
         </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.count}</Text>
-          <Text style={styles.statLabel}>Activities</Text>
+        <View style={[styles.statBox, { backgroundColor: colors.cardBackground, shadowColor: colors.shadow }]}>
+          <Text style={[styles.statValue, { color: colors.primary }]}>{stats.count}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Activities</Text>
         </View>
       </View>
 
       {/* Search Bar */}
       <TextInput
-        style={styles.searchInput}
+        style={[styles.searchInput, { 
+          backgroundColor: colors.inputBackground, 
+          borderColor: colors.border, 
+          color: colors.text 
+        }]}
         placeholder="Search by steps or date..."
         placeholderTextColor={colors.textSecondary}
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
 
-      {/* Action Buttons */}
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.addButton]}
-          onPress={() => router.push("/add")}
-        >
-          <Text style={styles.addButtonText}>+ Add Activity</Text>
-        </TouchableOpacity>
-        
-        {activities.length > 0 && (
-          <TouchableOpacity
-            style={[styles.actionButton, styles.deleteAllButton]}
-            onPress={handleDeleteAll}
-          >
-            <Text style={styles.deleteAllButtonText}>Delete All</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* Search Info */}
+      {searchQuery.trim().length > 0 && /^\d+$/.test(searchQuery.trim()) && (
+        <Text style={[styles.searchInfo, { color: colors.textSecondary }]}>
+          Showing results with most "{searchQuery}" digits first
+        </Text>
+      )}
 
       {/* Activities List */}
       {loading ? (
-        <Text style={styles.message}>Loading...</Text>
+        <LoadingSkeleton count={5} />
       ) : filteredActivities.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
+          <Text style={[styles.emptyText, { color: colors.text }]}>
             {searchQuery ? "No activities found" : "No activities yet"}
           </Text>
-          <Text style={styles.emptySubtext}>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
             {searchQuery ? "Try a different search" : "Add your first activity to get started!"}
           </Text>
         </View>
@@ -268,9 +242,34 @@ const HomeScreen: React.FC = () => {
             data={filteredActivities}
             renderItem={renderItem}
             estimatedItemSize={80}
+            keyExtractor={(item) => item.id.toString()}
           />
         </View>
       )}
+
+      {/* Bottom Buttons */}
+      <View style={[styles.buttonContainer, { 
+        backgroundColor: colors.background, 
+        borderTopColor: colors.border 
+      }]}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.addButton, { backgroundColor: colors.primary }]}
+          onPress={() => router.push("/add")}
+        >
+          <Text style={styles.addButtonText}>+ Add Activity</Text>
+        </TouchableOpacity>
+        
+        {filteredActivities.length > 0 && (
+          <TouchableOpacity
+            style={[styles.actionButton, styles.deleteAllButton, { backgroundColor: colors.danger }]}
+            onPress={handleDeleteAll}
+          >
+            <Text style={styles.deleteAllButtonText}>
+              {searchQuery.trim().length > 0 ? "Delete Search Results" : "Delete All"}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Edit Modal */}
       <EditModal
@@ -282,5 +281,100 @@ const HomeScreen: React.FC = () => {
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  mainContainer: {
+    flex: 1,
+  },
+  statsContainer: {
+    flexDirection: "row",
+    padding: 16,
+    gap: 12,
+  },
+  statBox: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+    textAlign: "center",
+  },
+  searchInput: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    fontSize: 16,
+    borderWidth: 1,
+  },
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  buttonContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    borderTopWidth: 1,
+  },
+  actionButton: {
+    padding: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  addButton: {},
+  deleteAllButton: {},
+  addButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  deleteAllButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  emptyText: {
+    fontSize: 20,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    fontSize: 16,
+    textAlign: "center",
+  },
+  searchInfo: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    fontSize: 12,
+    textAlign: "center",
+  },
+});
 
 export default HomeScreen;

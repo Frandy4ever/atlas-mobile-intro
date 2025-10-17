@@ -1,249 +1,472 @@
-# 👟 Activity Tracker App
+# Activity Tracker - Mobile Application
 
-A beautiful, feature-rich React Native mobile application for tracking your daily steps and physical activities. Built with Expo, this app provides an intuitive interface to log, manage, and visualize your fitness data with full dark mode support.
+A comprehensive mobile activity tracking application built with React Native and Expo, featuring user authentication, activity management, statistics visualization, and theme customization.
 
-## ✨ Features
+**Created by:** Frandy Slueue  
+**Email:** frandy.slueue@atlasstudents.com  
+**GitHub:** [@frandy4ever](https://github.com/frandy4ever)  
+**License:** MIT
 
-### 📊 Activity Management
-- **Add Activities**: Quickly log your step count with a simple, clean interface
-- **View Activities**: Browse all your activities in a scrollable list with step counts and timestamps
-- **Edit Activities**: Tap any activity to edit the step count
-- **Delete Activities**: Swipe left on any activity to delete it, or use the "Delete All" button to clear everything
-- **Search**: Filter activities by steps or date using the search bar
+---
 
-### 📈 Statistics & Insights
-- **Summary Cards**: View total steps, average steps, max steps, and min steps at a glance
-- **Recent Activities Chart**: Visual bar chart showing your last 7 activities
-- **Activity Distribution**: See how your activities are distributed across step ranges (0-2K, 2K-5K, 5K-10K, 10K+)
-- **Real-time Updates**: All statistics update automatically as you add, edit, or delete activities
+## 📱 Features
 
-### 🎨 User Experience
-- **Dark Mode**: Full dark mode support with a toggle button (☀️/🌙)
-- **Responsive Design**: Beautiful UI that adapts to your device
-- **Smooth Animations**: Polished transitions and interactions throughout the app
-- **Swipe Gestures**: Natural swipe-to-delete functionality
-- **Confirmation Dialogs**: Prevents accidental deletions with confirmation prompts
+### Core Functionality
+- **Activity Tracking**: Log and manage daily step counts with timestamps
+- **User Authentication**: Secure registration and login system with password validation
+- **Activity Management**: Create, edit, delete, and archive activities
+- **Statistics Dashboard**: Visual representations of activity data with charts and metrics
+- **Archive System**: Store completed activities separately from active ones
+- **Search & Filter**: Smart search with frequency-based sorting for numeric queries
+- **Theme Support**: Three beautiful themes (Light, Dark, Warm)
+- **Admin Panel**: User management interface for administrators
 
-### 💾 Data Persistence
-- **Local Database**: Uses SQLite for reliable local data storage
-- **Instant Sync**: All changes are immediately saved to the database
-- **Data Integrity**: Automatic table creation and data validation
+### User Experience
+- Swipe gestures for quick actions (delete left, archive right)
+- Real-time data updates across all screens
+- Skeleton loading states for smooth transitions
+- Responsive design with proper keyboard handling
+- Form validation with helpful error messages
+- Confirmation dialogs for destructive actions
 
-## 🛠️ Technology Stack
+---
 
-- **Framework**: React Native with Expo
-- **Language**: TypeScript
-- **Navigation**: Expo Router (file-based routing)
-- **Database**: Expo SQLite
-- **UI Components**: React Native core components
-- **State Management**: React Context API
-- **Gestures**: React Native Gesture Handler
-- **Lists**: FlashList for optimized list rendering
+## 🛠 Tech Stack
 
-## 📁 Project Structure
+### Framework & Libraries
+- **React Native** 0.81.4
+- **React** 19.1.0
+- **Expo** ^54.0.13
+- **Expo Router** ~6.0.11 (File-based navigation)
+- **TypeScript** ~5.9.2
 
-```
-.
-├── app/                          # Screen components (file-based routing)
-│   ├── _layout.tsx              # Root layout with tab navigation
-│   ├── index.tsx                # Home screen (activities list)
-│   ├── stats.tsx                # Statistics screen
-│   └── add.tsx                  # Add activity screen
-├── src/
-│   ├── components/              # Reusable components
-│   │   ├── ActivityItem.tsx    # Individual activity list item
-│   │   └── EditModal.tsx       # Modal for editing activities
-│   ├── context/                 # React contexts
-│   │   ├── ActivitiesContext.tsx  # Activities state management
-│   │   └── ThemeContext.tsx       # Theme (dark/light mode) management
-│   └── types/                   # TypeScript type definitions
-│       └── navigation.d.ts
-├── assets/                      # Images and static assets
-└── package.json
-```
+### UI & Styling
+- **lucide-react-native** ^0.546.0 (Icons)
+- **@shopify/flash-list** 2.0.2 (Optimized lists)
+- **react-native-gesture-handler** ~2.28.0 (Swipe gestures)
+- **react-native-reanimated** ~4.1.1 (Animations)
+- **victory-native** ^41.20.1 (Charts - available but not currently used)
 
-## 🚀 Getting Started
+### Database
+- **expo-sqlite** ^16.0.8 (Local SQLite database)
+
+### Additional Features
+- **expo-haptics** ~15.0.7 (Haptic feedback)
+- **expo-keep-awake** ~15.0.7 (Prevent screen sleep)
+
+---
+
+## 📦 Installation
 
 ### Prerequisites
-
-- Node.js (v14 or higher)
+- Node.js (v16 or higher)
 - npm or yarn
 - Expo CLI
-- iOS Simulator (for Mac) or Android Emulator
+- iOS Simulator (Mac) or Android Emulator
 
-### Installation
+### Setup Steps
 
-1. Clone the repository:
+1. **Clone the repository**
 ```bash
 git clone <repository-url>
 cd atlas-mobile-intro
 ```
 
-2. Install dependencies:
+2. **Install dependencies**
 ```bash
 npm install
 ```
 
-3. Start the development server:
+3. **Start the development server**
 ```bash
 npm start
-or
-npm expo start -c --tunnal
 ```
 
-4. Run on your device:
-- Press `i` for iOS simulator
-- Press `a` for Android emulator
-- Scan the QR code with Expo Go app on your physical device
+4. **Run on platform**
+```bash
+# iOS
+npm run ios
 
-## 📱 Screens Overview
+# Android
+npm run android
 
-### Home Screen (Activities)
-- Displays all logged activities in a scrollable list
-- Shows summary statistics at the top (total steps, average, count)
-- Search bar for filtering activities
-- "+ Add Activity" button to log new activities
-- "Delete All" button (appears when activities exist)
-- Dark mode toggle in the top-right corner (☀️/🌙)
-- Swipe left on any activity to delete
-- Tap any activity to edit
+# Web
+npm run web
+```
 
-### Statistics Screen
-- Summary cards showing total, average, max, and min steps
-- Bar chart visualizing recent activities (last 7)
-- Distribution breakdown showing activity ranges with progress bars
-- All visualizations update in real-time
+---
 
-### Add Activity Screen
-- Simple form to enter step count
-- Input validation (must be a positive number)
-- Success confirmation dialog
-- Automatically returns to home screen after adding
+## 📂 Project Structure
 
-## 🎨 Theme System
+```
+.
+├── app/                          # Screens (Expo Router)
+│   ├── _layout.tsx              # Root layout with navigation
+│   ├── index.tsx                # Home screen (activity list)
+│   ├── add.tsx                  # Add activity screen
+│   ├── stats.tsx                # Statistics screen
+│   ├── archive.tsx              # Archive screen
+│   ├── settings.tsx             # Settings screen
+│   ├── theme.tsx                # Theme selector
+│   ├── login.tsx                # Login screen
+│   ├── register.tsx             # Registration screen
+│   └── admin.tsx                # Admin panel
+├── src/
+│   ├── components/              # Reusable components
+│   │   ├── ActivityItem.tsx    # Activity list item with swipe
+│   │   ├── ArchivedItem.tsx    # Archived activity item
+│   │   ├── EditModal.tsx       # Edit activity modal
+│   │   ├── LoadingSkeleton.tsx # Loading placeholder
+│   │   └── ThemeSelector.tsx   # Theme picker modal
+│   ├── context/                 # React Context providers
+│   │   ├── ActivitiesContext.tsx  # Activity state management
+│   │   ├── ArchiveContext.tsx     # Archive state management
+│   │   ├── AuthContext.tsx        # Authentication & user management
+│   │   └── ThemeContext.tsx       # Theme state management
+│   └── types/                   # TypeScript definitions
+│       ├── auth.d.ts           # Auth-related types
+│       └── navigation.d.ts     # Navigation types
+├── assets/                      # Images and static files
+├── package.json                 # Dependencies
+├── app.json                     # Expo configuration
+├── tsconfig.json               # TypeScript configuration
+└── README.md                   # This file
+```
 
-The app features a comprehensive theming system with two modes:
-
-### Light Mode
-- Clean white backgrounds
-- Dark text for readability
-- Blue accent colors (#007AFF)
-- Subtle shadows and borders
-
-### Dark Mode
-- Pure black background (#000)
-- Dark card backgrounds (#1c1c1e)
-- White text with gray secondary text
-- Brighter blue accent (#0A84FF)
-- Optimized for OLED displays
-
-**Toggle**: Tap the sun/moon icon in the top-right corner of the home screen to switch themes.
+---
 
 ## 🗄️ Database Schema
 
-The app uses SQLite with the following table structure:
+### Tables
 
+#### **users**
 ```sql
-CREATE TABLE IF NOT EXISTS activities (
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT UNIQUE NOT NULL,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  firstName TEXT NOT NULL,
+  lastName TEXT NOT NULL,
+  phone TEXT NOT NULL,
+  isAdmin BOOLEAN DEFAULT FALSE,
+  createdAt INTEGER NOT NULL
+);
+```
+
+**Default Admin Account:**
+- Email: `atlas@studentmail.com`
+- Username: `admin22`
+- Password: `@Atlas22`
+
+#### **activities**
+```sql
+CREATE TABLE activities (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   steps INTEGER NOT NULL,
-  date INTEGER NOT NULL
-)
+  date INTEGER NOT NULL  -- Unix timestamp
+);
 ```
 
-- `id`: Unique identifier (auto-incrementing)
-- `steps`: Number of steps (integer)
-- `date`: Unix timestamp (seconds since epoch)
-
-## 🔧 Key Dependencies
-
-```json
-{
-  "expo": "~52.0.11",
-  "react-native": "0.76.3",
-  "expo-router": "~4.0.9",
-  "expo-sqlite": "~15.0.3",
-  "react-native-gesture-handler": "~2.20.2",
-  "@shopify/flash-list": "1.7.2"
-}
+#### **archived_activities**
+```sql
+CREATE TABLE archived_activities (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  steps INTEGER NOT NULL,
+  date INTEGER NOT NULL,        -- Original activity date
+  archivedAt INTEGER NOT NULL   -- Archive timestamp
+);
 ```
 
-## 🤝 Context Providers
+### Database Files
+- `app.db` - User authentication database
+- `activities.db` - Activities and archive database
 
-### ActivitiesContext
-Manages all activity-related state and operations:
-- `activities`: Array of all activities
-- `loading`: Loading state
-- `addActivity(steps)`: Add a new activity
-- `updateActivity(id, steps)`: Update an existing activity
-- `deleteActivity(id)`: Delete a single activity
-- `deleteAllActivities()`: Delete all activities
+---
 
-### ThemeContext
-Manages theme state:
-- `theme`: Current theme ("light" or "dark")
-- `colors`: Color palette for current theme
-- `isDark`: Boolean indicating if dark mode is active
-- `toggleTheme()`: Toggle between light and dark mode
+## 🔐 Authentication System
 
-## 📝 Usage Examples
+### Password Requirements
+- Minimum 6 characters
+- At least one letter
+- At least one number
+- At least one special character (@#!&$*)
+- No consecutive characters or sequential patterns
+- Not in common weak password list
 
-### Adding an Activity
-1. Tap the "+ Add Activity" button on the home screen
-2. Enter the number of steps (e.g., 10000)
-3. Tap "Add Activity"
-4. Confirm the success dialog
+### Username Requirements
+- 3-15 characters
+- Letters and numbers only
+- No spaces or special characters
+- Must be unique
 
-### Editing an Activity
-1. Tap on any activity in the list
-2. Modify the step count in the modal
-3. Tap "Save"
+### Email Requirements
+- Valid email format
+- Must be unique
 
-### Deleting an Activity
-1. Swipe left on the activity
-2. Tap the red "Delete" button
-3. Confirm the deletion
+### Phone Requirements
+- Exactly 10 digits (US format)
+- Numbers only
 
-### Switching to Dark Mode
-1. Tap the 🌙 icon in the top-right corner
-2. The app immediately switches to dark mode
-3. Tap the ☀️ icon to switch back to light mode
+### Features
+- Secure password validation
+- Duplicate email/username detection
+- Database migration support
+- Session management
+- Admin user creation on first launch
+
+---
+
+## 📊 Key Features Explained
+
+### Activity Management
+- **Add Activities**: Input step count with automatic timestamp
+- **Edit Activities**: Tap any activity to modify step count
+- **Delete Activities**: Swipe right to delete individual activities
+- **Archive Activities**: Swipe left to archive (moves to archive section)
+- **Bulk Delete**: Delete all activities or filtered search results
+
+### Search Functionality
+- Search by step count (with intelligent frequency + position sorting)
+- Search by date (supports partial date matching)
+- Search by time
+- Real-time filtering
+
+### Statistics
+- Total steps across all activities
+- Average steps per activity
+- Maximum and minimum step counts
+- Recent activity bar chart (last 7 entries)
+- Activity distribution by ranges (0-2K, 2K-5K, 5K-10K, 10K+)
+
+### Archive System
+- Permanent storage for completed activities
+- Separate statistics for archived data
+- Restore from archive functionality
+- Bulk delete archived activities
+- Independent from active activities
+
+### Theme System
+Three pre-configured themes:
+- **Light**: Clean, bright interface
+- **Dark**: OLED-friendly dark mode
+- **Warm**: Beige/cream aesthetic
+
+Themes affect:
+- Background colors
+- Card backgrounds
+- Text colors
+- Border colors
+- Input fields
+- Shadow colors
+
+---
+
+## 🎨 UI/UX Highlights
+
+### Gestures
+- **Swipe Left**: Archive activity
+- **Swipe Right**: Delete activity
+- **Tap**: Edit activity
+- **Pull to Refresh**: Reload data
+
+### Visual Feedback
+- Loading skeletons for data fetching
+- Success/error alerts for all actions
+- Haptic feedback on interactions
+- Smooth animations for transitions
+- Real-time badge updates
+
+### Accessibility
+- High contrast text colors
+- Clear visual hierarchy
+- Readable font sizes
+- Descriptive button labels
+- Confirmation dialogs for destructive actions
+
+---
+
+## 🚀 Development Workflow
+
+### Available Scripts
+```bash
+npm start              # Start Expo dev server
+npm run android        # Run on Android
+npm run ios           # Run on iOS
+npm run web           # Run on web browser
+npm run lint          # Run ESLint
+npm run reset-project # Reset project (removes example code)
+```
+
+### Development Tips
+1. Use Expo Go app for quick testing
+2. Enable hot reload for rapid iteration
+3. Check console logs for database operations
+4. Use TypeScript for type safety
+5. Test on both iOS and Android
+6. Clear app data if database schema changes
+
+---
 
 ## 🐛 Troubleshooting
 
 ### Database Issues
-If you encounter database errors, try:
-```bash
-expo start -c
-```
-This clears the cache and restarts the development server.
 
-### Build Issues
-Clear node modules and reinstall:
-```bash
-rm -rf node_modules
-npm install
-```
+**Error: "table users has no column named firstName"**
+- The app includes automatic database migration
+- If issues persist, uninstall and reinstall the app
+- This will recreate the database with the correct schema
 
-## 🔮 Future Enhancements
+**Activities not loading**
+- Check console for database errors
+- Ensure `expo-sqlite` is properly installed
+- Verify database file permissions
 
-Potential features for future versions:
-- Export data to CSV
-- Weekly/monthly goal setting
-- Activity categories (walking, running, cycling)
-- Charts with more date range options
-- Cloud sync across devices
-- Social sharing features
-- Activity streaks and achievements
+### Authentication Issues
 
-## 📄 License
+**Cannot login with admin account**
+- Default admin is created on first launch
+- Email: `atlas@studentmail.com`
+- Password: `@Atlas22`
+- Check database was initialized correctly
 
-This project is part of the ATLAS mobile development curriculum.
+**Password validation errors**
+- Ensure password meets all requirements
+- Check for consecutive characters
+- Avoid common weak passwords
 
-## 👥 Author
+### Navigation Issues
 
-Developed as part of the ATLAS mobile development program.
+**Stuck on login screen after successful auth**
+- Check `useAuth` hook is called at top level
+- Verify navigation guards in `_layout.tsx`
+- Clear app cache and restart
+
+### Performance Issues
+
+**Slow list scrolling**
+- FlashList is optimized for large datasets
+- Ensure `estimatedItemSize` is accurate
+- Reduce unnecessary re-renders with `useMemo`
 
 ---
 
-**Happy Tracking! 👟📊**
+## 🔧 Configuration
+
+### Expo Configuration (`app.json`)
+- **Name**: atlas-mobile-intro
+- **Slug**: atlas-mobile-intro
+- **Version**: 1.0.0
+- **Orientation**: Portrait
+- **New Architecture**: Enabled
+
+### TypeScript Configuration
+- Strict mode enabled
+- ES2020 target
+- ESNext module resolution
+
+---
+
+## 📱 Screen Descriptions
+
+### Home Screen (`index.tsx`)
+- Lists all active activities
+- Shows summary statistics (total, average, count)
+- Search bar with smart filtering
+- Add activity button
+- Delete all button (conditional)
+
+### Add Activity (`add.tsx`)
+- Simple form for step count input
+- Date/time picker
+- Validation for numeric input
+- Auto-focuses on mount
+
+### Statistics (`stats.tsx`)
+- Summary cards (total, average, max, min)
+- Bar chart for recent 7 activities
+- Distribution chart by step ranges
+- Responsive to theme changes
+
+### Archive (`archive.tsx`)
+- Lists all archived activities
+- Archive-specific statistics
+- Restore from archive functionality
+- Clear archive button
+
+### Settings (`settings.tsx`)
+- User profile management
+- Account preferences
+- Password change
+- Logout option
+
+### Login (`login.tsx`)
+- Username or email input
+- Password with show/hide toggle
+- Link to registration
+- Form validation
+
+### Register (`register.tsx`)
+- Multi-field registration form
+- Real-time validation feedback
+- Password matching confirmation
+- Phone number formatting
+
+### Admin Panel (`admin.tsx`)
+- User list with details
+- User management actions
+- Password reset functionality
+- Delete user capability
+
+---
+
+## 🎯 Future Enhancements
+
+Potential features for future versions:
+- Cloud sync with backend API
+- Social sharing of achievements
+- Goal setting and tracking
+- Notifications and reminders
+- Data export (CSV, PDF)
+- Charts with date range selection
+- Multi-user profiles on same device
+- Integration with fitness APIs
+- Dark mode scheduling
+- Biometric authentication
+
+---
+
+## 📄 License
+
+MIT License
+
+Copyright (c) 2024 Frandy Slueue
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+---
+
+## 👨‍💻 Developer
+
+**Frandy Slueue**  
+Atlas School Student  
+📧 frandy.slueue@atlasstudents.com  
+🐙 [@frandy4ever](https://github.com/frandy4ever)
+
+---
+
+## 🙏 Acknowledgments
+
+- Atlas School for the opportunity
+- Expo team for excellent documentation
+- React Native community for support
+- Lucide for beautiful icons
+- All beta testers and contributors
+
+---
+
+**Happy Tracking! 🎯**

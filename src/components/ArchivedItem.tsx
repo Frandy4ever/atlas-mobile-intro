@@ -1,58 +1,55 @@
 import React, { useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
-import { Footprints, Archive } from "lucide-react-native";
+import { Footprints, ArchiveRestore } from "lucide-react-native";
 import { useTheme } from "../context/ThemeContext";
-import type { Activity } from "../context/ActivitiesContext";
+import type { ArchivedActivity } from "../context/ArchiveContext";
 
-interface ActivityItemProps {
-  item: Activity;
+interface ArchivedItemProps {
+  item: ArchivedActivity;
   onDelete: (id: number) => void;
-  onEdit: (item: Activity) => void;
-  onArchive?: (item: Activity) => void;
+  onUnarchive: (item: ArchivedActivity) => void;
 }
 
-const ActivityItem: React.FC<ActivityItemProps> = ({ item, onDelete, onEdit, onArchive }) => {
+const ArchivedItem: React.FC<ArchivedItemProps> = ({ item, onDelete, onUnarchive }) => {
   const { colors } = useTheme();
   const swipeableRef = useRef<Swipeable>(null);
-  
+
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    return date.toLocaleDateString() + " " + date.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const handleDelete = () => {
     Alert.alert(
-      "Delete Activity",
-      "Are you sure you want to delete this activity?",
+      "Delete Archived Activity",
+      "Are you sure you want to permanently delete this activity?",
       [
-        { 
-          text: "Cancel", 
+        {
+          text: "Cancel",
           style: "cancel",
           onPress: () => {
             swipeableRef.current?.close();
-          }
+          },
         },
-        { 
-          text: "Delete", 
+        {
+          text: "Delete",
           style: "destructive",
           onPress: () => {
             swipeableRef.current?.close();
             setTimeout(() => onDelete(item.id), 300);
-          }
-        }
+          },
+        },
       ]
     );
   };
 
-  const handleArchive = () => {
-    if (onArchive) {
-      swipeableRef.current?.close();
-      setTimeout(() => onArchive(item), 300);
-    }
+  const handleUnarchive = () => {
+    swipeableRef.current?.close();
+    setTimeout(() => onUnarchive(item), 300);
   };
 
   const renderRightActions = () => (
@@ -65,15 +62,13 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ item, onDelete, onEdit, onA
   );
 
   const renderLeftActions = () => (
-    onArchive && (
-      <TouchableOpacity
-        style={[styles.archiveButton, { backgroundColor: colors.primary }]}
-        onPress={handleArchive}
-      >
-        <Archive color="#fff" size={20} />
-        <Text style={styles.archiveButtonText}>Archive</Text>
-      </TouchableOpacity>
-    )
+    <TouchableOpacity
+      style={[styles.restoreButton, { backgroundColor: colors.primary }]}
+      onPress={handleUnarchive}
+    >
+      <ArchiveRestore color="#fff" size={20} />
+      <Text style={styles.restoreButtonText}>Restore</Text>
+    </TouchableOpacity>
   );
 
   const dynamicStyles = StyleSheet.create({
@@ -115,18 +110,11 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ item, onDelete, onEdit, onA
       renderLeftActions={renderLeftActions}
       overshootLeft={false}
       overshootRight={false}
-      friction={2}
-      leftThreshold={40}
-      rightThreshold={40}
     >
-      <TouchableOpacity 
-        style={dynamicStyles.activityItem}
-        onPress={() => onEdit(item)}
-        activeOpacity={0.7}
-      >
+      <TouchableOpacity style={dynamicStyles.activityItem} activeOpacity={0.7}>
         <View style={styles.contentRow}>
           <View style={dynamicStyles.iconContainer}>
-            <Footprints color={colors.primary} size={24} />
+            <Footprints color={colors.textSecondary} size={24} />
           </View>
           <View style={styles.textContainer}>
             <Text style={dynamicStyles.stepsText}>{item.steps.toLocaleString()} steps</Text>
@@ -160,7 +148,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 14,
   },
-  archiveButton: {
+  restoreButton: {
     justifyContent: "center",
     alignItems: "center",
     width: 80,
@@ -169,11 +157,11 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 12,
     gap: 4,
   },
-  archiveButtonText: {
+  restoreButtonText: {
     color: "#fff",
     fontWeight: "600",
     fontSize: 12,
   },
 });
 
-export default ActivityItem;
+export default ArchivedItem;

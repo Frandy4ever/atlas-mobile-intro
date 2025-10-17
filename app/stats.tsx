@@ -2,11 +2,12 @@ import React, { useMemo } from "react";
 import { View, Text, StyleSheet, ScrollView, Dimensions } from "react-native";
 import { useActivities } from "../src/context/ActivitiesContext";
 import { useTheme } from "../src/context/ThemeContext";
+import LoadingSkeleton from "../src/components/LoadingSkeleton";
 
 const { width } = Dimensions.get("window");
 
 const StatsScreen: React.FC = () => {
-  const { activities } = useActivities();
+  const { activities, loading } = useActivities();
   const { colors } = useTheme();
 
   const stats = useMemo(() => {
@@ -129,6 +130,7 @@ const StatsScreen: React.FC = () => {
       alignItems: "flex-end",
       justifyContent: "space-around",
       paddingHorizontal: 8,
+      paddingTop: 20,
     },
     barWrapper: {
       flex: 1,
@@ -198,6 +200,14 @@ const StatsScreen: React.FC = () => {
       borderRadius: 4,
     },
   });
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <LoadingSkeleton count={5} />
+      </View>
+    );
+  }
 
   if (activities.length === 0) {
     return (

@@ -1,15 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useColorScheme } from "react-native";
 
-export type Theme = "light" | "dark";
+export type Theme = "light" | "dark" | "warm";
 
 export const lightColors = {
   background: "#f5f5f5",
   cardBackground: "#fff",
   text: "#1a1a1a",
   textSecondary: "#666",
-  primary: "#007AFF",
-  danger: "#FF3B30",
+  primary: "#1ed2af",
+  danger: "#d00414",
   border: "#ddd",
   inputBackground: "#fff",
   shadow: "#000",
@@ -21,18 +21,32 @@ export const darkColors = {
   cardBackground: "#1c1c1e",
   text: "#fff",
   textSecondary: "#8e8e93",
-  primary: "#0A84FF",
-  danger: "#FF453A",
+  primary: "#1ed2af",
+  danger: "#d00414",
   border: "#38383a",
   inputBackground: "#1c1c1e",
   shadow: "#000",
   iconBackground: "#1e3a1e",
 };
 
+export const warmColors = {
+  background: "#fef9e6",
+  cardBackground: "#fff9e6",
+  text: "#3a3a2a",
+  textSecondary: "#8a8a7a",
+  primary: "#1ed2af",
+  danger: "#d00414",
+  border: "#e8e0c8",
+  inputBackground: "#fffdf5",
+  shadow: "#000",
+  iconBackground: "#f0ecd8",
+  
+};
+
 interface ThemeContextType {
   theme: Theme;
   colors: typeof lightColors;
-  toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
   isDark: boolean;
 }
 
@@ -42,15 +56,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const systemColorScheme = useColorScheme();
   const [theme, setTheme] = useState<Theme>(systemColorScheme === "dark" ? "dark" : "light");
 
-  const colors = theme === "dark" ? darkColors : lightColors;
+  const colors = theme === "dark" ? darkColors : theme === "warm" ? warmColors : lightColors;
   const isDark = theme === "dark";
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === "light" ? "dark" : "light");
-  };
-
   return (
-    <ThemeContext.Provider value={{ theme, colors, toggleTheme, isDark }}>
+    <ThemeContext.Provider value={{ theme, colors, setTheme, isDark }}>
       {children}
     </ThemeContext.Provider>
   );

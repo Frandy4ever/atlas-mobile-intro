@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
-import { AuthState, LoginData, RegisterData, UpdateUserData, User } from '../types/auth';
+import { AuthState, LoginData, RegisterData, UpdateUserData, User, PasswordResetRequest } from '../types/auth';
 
 interface AuthContextType extends AuthState {
   register: (data: RegisterData) => Promise<boolean>;
@@ -11,6 +11,13 @@ interface AuthContextType extends AuthState {
   deleteUser: (id: number) => Promise<boolean>;
   getAllUsers: () => Promise<User[]>;
   resetUserPassword: (id: number, newPassword: string) => Promise<boolean>;
+  users: User[];
+  passwordResetRequests: PasswordResetRequest[];
+  requestPasswordReset: (username: string, email: string) => Promise<boolean>;
+  approvePasswordReset: (requestId: number) => Promise<boolean>;
+  completePasswordReset: (username: string, email: string, newPassword: string) => Promise<boolean>;
+  getPendingResetRequests: () => Promise<PasswordResetRequest[]>;
+  hasPendingResetRequests: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,6 +36,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
   });
 
   const [db, setDb] = useState<SQLite.SQLiteDatabase | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [passwordResetRequests, setPasswordResetRequests] = useState<PasswordResetRequest[]>([]);
+  const [hasPendingResetRequests, setHasPendingResetRequests] = useState(false);
 
   // Check if table needs migration
   const needsMigration = async (database: SQLite.SQLiteDatabase): Promise<boolean> => {
@@ -133,6 +143,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
           `);
         }
 
+        // Create password reset requests table
+        await database.execAsync(`
+          CREATE TABLE IF NOT EXISTS password_reset_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId INTEGER NOT NULL,
+            username TEXT NOT NULL,
+            email TEXT NOT NULL,
+            requestedAt INTEGER NOT NULL,
+            status TEXT NOT NULL,
+            approvedBy INTEGER,
+            approvedAt INTEGER,
+            completedAt INTEGER,
+            FOREIGN KEY (userId) REFERENCES users (id),
+            FOREIGN KEY (approvedBy) REFERENCES users (id)
+          );
+        `);
+
         // Check if admin user exists, if not create it
         const adminCheck = await database.getAllAsync<{ count: number; }>(
           'SELECT COUNT(*) as count FROM users WHERE email = ?',
@@ -146,6 +173,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
           );
           console.log('Admin user created successfully');
         }
+
+        // Load all users
+        const userList = await database.getAllAsync<User>(
+          'SELECT * FROM users ORDER BY createdAt DESC'
+        );
+        setUsers(userList);
+
+        // Load password reset requests
+        await loadPasswordResetRequests();
 
         // Check for existing session (you can implement persistent login here)
         setAuthState(prev => ({ ...prev, isLoading: false }));
@@ -266,6 +302,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
     }
   };
 
+  const loadPasswordResetRequests = async () => {
+    if (!db) return;
+    
+    try {
+      const requests = await db.getAllAsync<PasswordResetRequest>(
+        'SELECT * FROM password_reset_requests ORDER BY requestedAt DESC'
+      );
+      setPasswordResetRequests(requests);
+      
+      const pendingRequests = requests.filter(req => req.status === 'pending');
+      setHasPendingResetRequests(pendingRequests.length > 0);
+    } catch (error) {
+      console.error('Error loading password reset requests:', error);
+    }
+  };
+
   const register = async (data: RegisterData): Promise<boolean> => {
     if (!db) {
       Alert.alert('Error', 'Database not initialized');
@@ -351,6 +403,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
         isLoading: false,
       });
 
+      // Update users list
+      const userList = await db.getAllAsync<User>(
+        'SELECT * FROM users ORDER BY createdAt DESC'
+      );
+      setUsers(userList);
+
       Alert.alert('Success', `Welcome, ${data.firstName}! Account created successfully!`);
       return true;
 
@@ -402,6 +460,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
           isAuthenticated: true,
           isLoading: false,
         });
+
         Alert.alert('Success', `Welcome back, ${user.firstName}!`);
         return true;
       } else {
@@ -419,6 +478,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
     if (!db) return false;
 
     try {
+      // Validate password if provided
       if (data.password) {
         const passwordValidation = validatePassword(data.password);
         if (!passwordValidation.isValid) {
@@ -427,6 +487,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
         }
       }
 
+      // Validate username if provided
       if (data.username) {
         if (!validateUsername(data.username)) {
           Alert.alert('Error', 'Username must be 3-15 characters (letters and numbers only)');
@@ -445,17 +506,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
         }
       }
 
+      // Validate email if provided
+      if (data.email) {
+        if (!validateEmail(data.email)) {
+          Alert.alert('Error', 'Please enter a valid email address');
+          return false;
+        }
+
+        // Check if email is taken by another user
+        const emailExists = await db.getAllAsync<{ count: number; }>(
+          'SELECT COUNT(*) as count FROM users WHERE email = ? AND id != ?',
+          [data.email, id]
+        );
+
+        if (emailExists[0]?.count > 0) {
+          Alert.alert('Error', 'Email already taken');
+          return false;
+        }
+      }
+
+      // Validate phone if provided
+      if (data.phone) {
+        if (!validatePhone(data.phone)) {
+          Alert.alert('Error', 'Please enter a valid 10-digit phone number');
+          return false;
+        }
+      }
+
       const updates: string[] = [];
       const values: any[] = [];
+
+      if (data.email) {
+        updates.push('email = ?');
+        values.push(data.email);
+      }
 
       if (data.username) {
         updates.push('username = ?');
         values.push(data.username);
       }
 
+      if (data.phone) {
+        updates.push('phone = ?');
+        values.push(data.phone);
+      }
+
       if (data.password) {
         updates.push('password = ?');
         values.push(data.password);
+      }
+
+      if (updates.length === 0) {
+        Alert.alert('Info', 'No changes to update');
+        return false;
       }
 
       values.push(id);
@@ -471,10 +574,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
           ...prev,
           user: {
             ...prev.user!,
+            email: data.email || prev.user!.email,
             username: data.username || prev.user!.username,
+            phone: data.phone || prev.user!.phone,
           }
         }));
       }
+
+      // Update users list
+      const userList = await db.getAllAsync<User>(
+        'SELECT * FROM users ORDER BY createdAt DESC'
+      );
+      setUsers(userList);
 
       Alert.alert('Success', 'Profile updated successfully');
       return true;
@@ -489,14 +600,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
     if (!db) return false;
 
     try {
+      // Delete user's password reset requests first
+      await db.runAsync(
+        'DELETE FROM password_reset_requests WHERE userId = ?',
+        [id]
+      );
+
+      // Delete the user
       await db.runAsync('DELETE FROM users WHERE id = ?', [id]);
+
+      // Update users list
+      const userList = await db.getAllAsync<User>(
+        'SELECT * FROM users ORDER BY createdAt DESC'
+      );
+      setUsers(userList);
+
+      // Reload password reset requests to update UI
+      await loadPasswordResetRequests();
 
       // If user deletes their own account, log them out
       if (authState.user && authState.user.id === id) {
         logout();
       }
 
-      Alert.alert('Success', 'Account deleted successfully');
+      Alert.alert('Success', 'Account and associated password reset requests deleted successfully');
       return true;
     } catch (error) {
       console.error('Delete user error:', error);
@@ -512,10 +639,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
     }
 
     try {
-      const users = await db.getAllAsync<User>(
+      const userList = await db.getAllAsync<User>(
         'SELECT * FROM users ORDER BY createdAt DESC'
       );
-      return users;
+      setUsers(userList);
+      return userList;
     } catch (error) {
       console.error('Get all users error:', error);
       return [];
@@ -546,6 +674,130 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
     }
   };
 
+  const requestPasswordReset = async (username: string, email: string): Promise<boolean> => {
+    if (!db) return false;
+
+    try {
+      // Find user by username and email
+      const userResult = await db.getAllAsync<User>(
+        'SELECT * FROM users WHERE username = ? AND email = ?',
+        [username, email]
+      );
+
+      if (userResult.length === 0) {
+        Alert.alert('Error', 'No user found with that username and email combination');
+        return false;
+      }
+
+      const user = userResult[0];
+
+      // Check if there's already a pending request
+      const existingRequest = await db.getAllAsync<PasswordResetRequest>(
+        'SELECT * FROM password_reset_requests WHERE userId = ? AND status = ?',
+        [user.id, 'pending']
+      );
+
+      if (existingRequest.length > 0) {
+        Alert.alert('Request Already Pending', 'You already have a pending password reset request. Please wait for administrator approval.');
+        return false;
+      }
+
+      // Create new reset request
+      await db.runAsync(
+        'INSERT INTO password_reset_requests (userId, username, email, requestedAt, status) VALUES (?, ?, ?, ?, ?)',
+        [user.id, username, email, Date.now(), 'pending']
+      );
+
+      // Reload reset requests
+      await loadPasswordResetRequests();
+      
+      Alert.alert('Success', 'Password reset request submitted. An administrator will review your request.');
+      return true;
+    } catch (error) {
+      console.error('Error requesting password reset:', error);
+      Alert.alert('Error', 'Failed to submit password reset request');
+      return false;
+    }
+  };
+
+  const approvePasswordReset = async (requestId: number): Promise<boolean> => {
+    if (!db || !authState.user) return false;
+
+    try {
+      await db.runAsync(
+        'UPDATE password_reset_requests SET status = ?, approvedBy = ?, approvedAt = ? WHERE id = ?',
+        ['approved', authState.user.id, Date.now(), requestId]
+      );
+
+      await loadPasswordResetRequests();
+      return true;
+    } catch (error) {
+      console.error('Error approving password reset:', error);
+      return false;
+    }
+  };
+
+  const completePasswordReset = async (username: string, email: string, newPassword: string): Promise<boolean> => {
+    if (!db) return false;
+
+    try {
+      // Validate password
+      const passwordValidation = validatePassword(newPassword);
+      if (!passwordValidation.isValid) {
+        Alert.alert('Error', passwordValidation.message);
+        return false;
+      }
+
+      // Find approved reset request
+      const requestResult = await db.getAllAsync<PasswordResetRequest>(
+        'SELECT * FROM password_reset_requests WHERE username = ? AND email = ? AND status = ?',
+        [username, email, 'approved']
+      );
+
+      if (requestResult.length === 0) {
+        Alert.alert('Error', 'No approved password reset request found. Please contact administrator.');
+        return false;
+      }
+
+      const request = requestResult[0];
+
+      // Update user password
+      await db.runAsync(
+        'UPDATE users SET password = ? WHERE id = ?',
+        [newPassword, request.userId]
+      );
+
+      // Mark request as completed
+      await db.runAsync(
+        'UPDATE password_reset_requests SET status = ?, completedAt = ? WHERE id = ?',
+        ['completed', Date.now(), request.id]
+      );
+
+      await loadPasswordResetRequests();
+      Alert.alert('Success', 'Password reset successfully! You can now login with your new password.');
+      return true;
+    } catch (error) {
+      console.error('Error completing password reset:', error);
+      Alert.alert('Error', 'Failed to reset password');
+      return false;
+    }
+  };
+
+  const getPendingResetRequests = async (): Promise<PasswordResetRequest[]> => {
+    if (!db) return [];
+    
+    try {
+      const requests = await db.getAllAsync<PasswordResetRequest>(
+        'SELECT * FROM password_reset_requests WHERE status = ? ORDER BY requestedAt DESC',
+        ['pending']
+      );
+      return requests;
+    } catch (error) {
+      console.error('Error getting pending reset requests:', error);
+      return [];
+    }
+  };
+
   const logout = () => {
     setAuthState({
       user: null,
@@ -558,6 +810,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
     <AuthContext.Provider
       value={{
         ...authState,
+        users,
+        passwordResetRequests,
+        hasPendingResetRequests,
         register,
         login,
         logout,
@@ -565,6 +820,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; }> = ({ childre
         deleteUser,
         getAllUsers,
         resetUserPassword,
+        requestPasswordReset,
+        approvePasswordReset,
+        completePasswordReset,
+        getPendingResetRequests,
       }}
     >
       {children}

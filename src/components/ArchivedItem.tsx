@@ -1,55 +1,81 @@
 import React, { useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
-import { Footprints, ArchiveRestore } from "lucide-react-native";
+import { Footprints, RotateCcw } from "lucide-react-native";
 import { useTheme } from "../context/ThemeContext";
 import type { ArchivedActivity } from "../context/ArchiveContext";
 
-interface ArchivedItemProps {
+interface ArchiveItemProps {
   item: ArchivedActivity;
+  onRestore: (item: ArchivedActivity) => void;
   onDelete: (id: number) => void;
-  onUnarchive: (item: ArchivedActivity) => void;
+  onSave?: (item: ArchivedActivity) => void; // New prop for saving activity
 }
 
-const ArchivedItem: React.FC<ArchivedItemProps> = ({ item, onDelete, onUnarchive }) => {
+const ArchiveItem: React.FC<ArchiveItemProps> = ({ item, onRestore, onDelete, onSave }) => {
   const { colors } = useTheme();
   const swipeableRef = useRef<Swipeable>(null);
-
+  
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString() + " " + date.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
+    return date.toLocaleDateString() + " " + date.toLocaleTimeString([], { 
+      hour: '2-digit', 
+      minute: '2-digit' 
     });
+  };
+
+  const handleRestore = () => {
+    Alert.alert(
+      "Restore Activity",
+      "Are you sure you want to restore this activity?",
+      [
+        { 
+          text: "Cancel", 
+          style: "cancel",
+          onPress: () => {
+            swipeableRef.current?.close();
+          }
+        },
+        { 
+          text: "Restore", 
+          style: "default",
+          onPress: () => {
+            swipeableRef.current?.close();
+            setTimeout(() => onRestore(item), 300);
+          }
+        }
+      ]
+    );
   };
 
   const handleDelete = () => {
     Alert.alert(
       "Delete Archived Activity",
-      "Are you sure you want to permanently delete this activity?",
+      "Are you sure you want to permanently delete this archived activity?",
       [
-        {
-          text: "Cancel",
+        { 
+          text: "Cancel", 
           style: "cancel",
           onPress: () => {
             swipeableRef.current?.close();
-          },
+          }
         },
-        {
-          text: "Delete",
+        { 
+          text: "Delete", 
           style: "destructive",
           onPress: () => {
             swipeableRef.current?.close();
             setTimeout(() => onDelete(item.id), 300);
-          },
-        },
+          }
+        }
       ]
     );
   };
 
-  const handleUnarchive = () => {
-    swipeableRef.current?.close();
-    setTimeout(() => onUnarchive(item), 300);
+  const handleLongPress = () => {
+    if (onSave) {
+      onSave(item);
+    }
   };
 
   const renderRightActions = () => (
@@ -64,15 +90,15 @@ const ArchivedItem: React.FC<ArchivedItemProps> = ({ item, onDelete, onUnarchive
   const renderLeftActions = () => (
     <TouchableOpacity
       style={[styles.restoreButton, { backgroundColor: colors.primary }]}
-      onPress={handleUnarchive}
+      onPress={handleRestore}
     >
-      <ArchiveRestore color="#fff" size={20} />
+      <RotateCcw color="#fff" size={20} />
       <Text style={styles.restoreButtonText}>Restore</Text>
     </TouchableOpacity>
   );
 
   const dynamicStyles = StyleSheet.create({
-    activityItem: {
+    archiveItem: {
       backgroundColor: colors.cardBackground,
       marginBottom: 8,
       borderRadius: 12,
@@ -110,15 +136,26 @@ const ArchivedItem: React.FC<ArchivedItemProps> = ({ item, onDelete, onUnarchive
       renderLeftActions={renderLeftActions}
       overshootLeft={false}
       overshootRight={false}
+      friction={2}
+      leftThreshold={40}
+      rightThreshold={40}
     >
-      <TouchableOpacity style={dynamicStyles.activityItem} activeOpacity={0.7}>
+      <TouchableOpacity 
+        style={dynamicStyles.archiveItem}
+        onLongPress={handleLongPress}
+        activeOpacity={0.7}
+        delayLongPress={500} // 500ms long press
+      >
         <View style={styles.contentRow}>
           <View style={dynamicStyles.iconContainer}>
-            <Footprints color={colors.textSecondary} size={24} />
+            <Footprints color={colors.primary} size={24} />
           </View>
           <View style={styles.textContainer}>
             <Text style={dynamicStyles.stepsText}>{item.steps.toLocaleString()} steps</Text>
             <Text style={dynamicStyles.dateText}>{formatDate(item.date)}</Text>
+            <Text style={[dynamicStyles.dateText, { fontSize: 12 }]}>
+              Archived: {formatDate(item.archivedAt)}
+            </Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -164,4 +201,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ArchivedItem;
+export default ArchiveItem;

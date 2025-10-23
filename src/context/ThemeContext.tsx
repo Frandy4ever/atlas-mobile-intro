@@ -1,46 +1,76 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useColorScheme } from "react-native";
 
-export type Theme = "light" | "dark" | "warm";
+export type Theme = "light" | "dark" | "warm" | "cyberberry" | "stargazer";
 
 export const lightColors = {
-  background: "#f5f5f5",
-  cardBackground: "#fff",
-  text: "#1a1a1a",
-  textSecondary: "#666",
-  primary: "#1ed2af",
-  danger: "#d00414",
-  border: "#ddd",
-  inputBackground: "#fff",
-  shadow: "#000",
-  iconBackground: "#E8F5E9",
+  background: "#fafafa",
+  cardBackground: "#ffffff",
+  text: "#020617",
+  textSecondary: "#64748b",
+  primary: "#10b981", // green
+  secondary: "#3b82f6", // blue
+  danger: "#b91c1c", // delete buttons
+  border: "#e2e8f0",
+  inputBackground: "#ffffff",
+  shadow: "#000000",
+  iconBackground: "#f1f5f9",
 };
 
 export const darkColors = {
-  background: "#000",
-  cardBackground: "#1c1c1e",
-  text: "#fff",
-  textSecondary: "#8e8e93",
-  primary: "#1ed2af",
-  danger: "#d00414",
-  border: "#38383a",
-  inputBackground: "#1c1c1e",
-  shadow: "#000",
-  iconBackground: "#1e3a1e",
+  background: "#020617",
+  cardBackground: "#0f172a",
+  text: "#f8fafc",
+  textSecondary: "#94a3b8",
+  primary: "#10b981", // green
+  secondary: "#3b82f6", // blue
+  danger: "#b91c1c", // delete buttons
+  border: "#334155",
+  inputBackground: "#1e293b",
+  shadow: "#000000",
+  iconBackground: "#1e293b",
 };
 
 export const warmColors = {
-  background: "#fef9e6",
-  cardBackground: "#fff9e6",
-  text: "#3a3a2a",
-  textSecondary: "#8a8a7a",
-  primary: "#1ed2af",
-  danger: "#d00414",
-  border: "#e8e0c8",
-  inputBackground: "#fffdf5",
-  shadow: "#000",
-  iconBackground: "#f0ecd8",
-  
+  background: "#fef3c7",
+  cardBackground: "#fef7cd",
+  text: "#451a03",
+  textSecondary: "#92400e",
+  primary: "#10b981", // green
+  secondary: "#3b82f6", // blue
+  danger: "#b91c1c", // delete buttons
+  border: "#fcd34d",
+  inputBackground: "#fefce8",
+  shadow: "#000000",
+  iconBackground: "#fef3c7",
+};
+
+export const cyberberryColors = {
+  background: "#fdf4ff",
+  cardBackground: "#faf5ff",
+  text: "#3b0764",
+  textSecondary: "#7e22ce",
+  primary: "#d946ef", // cyberberry
+  secondary: "#3b82f6", // blue
+  danger: "#b91c1c", // delete buttons
+  border: "#e9d5ff",
+  inputBackground: "#faf5ff",
+  shadow: "#000000",
+  iconBackground: "#f3e8ff",
+};
+
+export const stargazerColors = {
+  background: "#f0f9ff",
+  cardBackground: "#e0f2fe",
+  text: "#0c4a6e",
+  textSecondary: "#0369a1",
+  primary: "#0ea5e9",
+  secondary: "#3b82f6", // blue
+  danger: "#b91c1c", // delete buttons
+  border: "#bae6fd",
+  inputBackground: "#f0f9ff",
+  shadow: "#000000",
+  iconBackground: "#e0f2fe",
 };
 
 interface ThemeContextType {
@@ -56,7 +86,22 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const systemColorScheme = useColorScheme();
   const [theme, setTheme] = useState<Theme>(systemColorScheme === "dark" ? "dark" : "light");
 
-  const colors = theme === "dark" ? darkColors : theme === "warm" ? warmColors : lightColors;
+  const getColors = () => {
+    switch (theme) {
+      case "dark":
+        return darkColors;
+      case "warm":
+        return warmColors;
+      case "cyberberry":
+        return cyberberryColors;
+      case "stargazer":
+        return stargazerColors;
+      default:
+        return lightColors;
+    }
+  };
+
+  const colors = getColors();
   const isDark = theme === "dark";
 
   return (

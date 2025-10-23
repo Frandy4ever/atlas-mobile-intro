@@ -12,7 +12,7 @@ import EditModal from "../src/components/EditModal";
 import LoadingSkeleton from "../src/components/LoadingSkeleton";
 
 const HomeScreen: React.FC = () => {
-  const { activities, loading, deleteActivity, deleteAllActivities, updateActivity } = useActivities();
+  const { activities, loading, deleteActivity, deleteAllUnprotected, updateActivity, protectActivity } = useActivities();
   const { archiveActivity } = useArchive();
   const { colors } = useTheme();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -120,8 +120,8 @@ const HomeScreen: React.FC = () => {
     Alert.alert(
       isFiltered ? "Delete Search Results" : "Delete All Activities",
       isFiltered 
-        ? `Are you sure you want to delete all ${itemCount} search result${itemCount !== 1 ? 's' : ''}? This cannot be undone.`
-        : "Are you sure you want to delete all activities? This cannot be undone.",
+        ? `Are you sure you want to delete all ${itemCount} search result${itemCount !== 1 ? 's' : ''}? This will only delete unprotected activities.`
+        : "Are you sure you want to delete all unprotected activities? Protected activities will be preserved.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -130,13 +130,15 @@ const HomeScreen: React.FC = () => {
           onPress: async () => {
             try {
               if (isFiltered) {
-                // Delete only filtered activities
+                // Delete only filtered unprotected activities
                 for (const activity of filteredActivities) {
-                  await deleteActivity(activity.id);
+                  if (!activity.isProtected) {
+                    await deleteActivity(activity.id);
+                  }
                 }
               } else {
-                // Delete all activities
-                await deleteAllActivities();
+                // Delete all unprotected activities
+                await deleteAllUnprotected();
               }
             } catch (err) {
               Alert.alert("Error", "Failed to delete activities");
@@ -169,6 +171,28 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+  const handleSaveActivity = (activity: Activity) => {
+    Alert.alert(
+      "Save Activity",
+      "Do you want to protect this activity from being deleted by the 'Delete All' button?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Save",
+          style: "default",
+          onPress: async () => {
+            try {
+              await protectActivity(activity.id);
+              Alert.alert("Success", "Activity saved and protected!");
+            } catch (err) {
+              Alert.alert("Error", "Failed to save activity");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleSaveEdit = async (id: number, steps: number) => {
     try {
       await updateActivity(id, steps);
@@ -183,6 +207,7 @@ const HomeScreen: React.FC = () => {
       onDelete={handleDelete}
       onEdit={handleEdit}
       onArchive={handleArchive}
+      onSave={handleSaveActivity}
     />
   );
 
@@ -265,7 +290,7 @@ const HomeScreen: React.FC = () => {
             onPress={handleDeleteAll}
           >
             <Text style={styles.deleteAllButtonText}>
-              {searchQuery.trim().length > 0 ? "Delete Search Results" : "Delete All"}
+              {searchQuery.trim().length > 0 ? "Delete Search Results" : "Delete All Unprotected"}
             </Text>
           </TouchableOpacity>
         )}

@@ -1,7 +1,7 @@
 import React, { useRef } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
-import { Footprints, Archive } from "lucide-react-native";
+import { Footprints, Archive, Shield } from "lucide-react-native";
 import { useTheme } from "../context/ThemeContext";
 import type { Activity } from "../context/ActivitiesContext";
 
@@ -10,9 +10,16 @@ interface ActivityItemProps {
   onDelete: (id: number) => void;
   onEdit: (item: Activity) => void;
   onArchive?: (item: Activity) => void;
+  onSave?: (item: Activity) => void;
 }
 
-const ActivityItem: React.FC<ActivityItemProps> = ({ item, onDelete, onEdit, onArchive }) => {
+const ActivityItem: React.FC<ActivityItemProps> = ({ 
+  item, 
+  onDelete, 
+  onEdit, 
+  onArchive, 
+  onSave 
+}) => {
   const { colors } = useTheme();
   const swipeableRef = useRef<Swipeable>(null);
   
@@ -32,9 +39,7 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ item, onDelete, onEdit, onA
         { 
           text: "Cancel", 
           style: "cancel",
-          onPress: () => {
-            swipeableRef.current?.close();
-          }
+          onPress: () => swipeableRef.current?.close()
         },
         { 
           text: "Delete", 
@@ -55,58 +60,76 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ item, onDelete, onEdit, onA
     }
   };
 
+  const handleLongPress = () => {
+    if (onSave) {
+      onSave(item);
+    }
+  };
+
   const renderRightActions = () => (
-    <TouchableOpacity
-      style={[styles.deleteButton, { backgroundColor: colors.danger }]}
-      onPress={handleDelete}
-    >
-      <Text style={styles.deleteButtonText}>Delete</Text>
-    </TouchableOpacity>
+    <View style={styles.actionContainer}>
+      <TouchableOpacity
+        style={[styles.actionButton, { backgroundColor: '#ef4444' }]}
+        onPress={handleDelete}
+      >
+        <Text style={styles.actionButtonText}>Delete</Text>
+      </TouchableOpacity>
+    </View>
   );
 
   const renderLeftActions = () => (
-    onArchive && (
-      <TouchableOpacity
-        style={[styles.archiveButton, { backgroundColor: colors.primary }]}
-        onPress={handleArchive}
-      >
-        <Archive color="#fff" size={20} />
-        <Text style={styles.archiveButtonText}>Archive</Text>
-      </TouchableOpacity>
-    )
+    <View style={styles.actionContainer}>
+      {onArchive && (
+        <TouchableOpacity
+          style={[styles.actionButton, { backgroundColor: colors.primary }]}
+          onPress={handleArchive}
+        >
+          <Archive color="#fff" size={20} />
+          <Text style={styles.actionButtonText}>Archive</Text>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 
-  const dynamicStyles = StyleSheet.create({
-    activityItem: {
-      backgroundColor: colors.cardBackground,
-      marginBottom: 8,
-      borderRadius: 12,
-      shadowColor: colors.shadow,
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    iconContainer: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      backgroundColor: colors.iconBackground,
-      justifyContent: "center",
-      alignItems: "center",
-      marginRight: 12,
-    },
-    stepsText: {
-      fontSize: 18,
-      fontWeight: "600",
-      color: colors.text,
-      marginBottom: 4,
-    },
-    dateText: {
-      fontSize: 14,
-      color: colors.textSecondary,
-    },
-  });
+  // Create dynamic styles
+  const activityItemStyle = {
+    backgroundColor: colors.cardBackground,
+    marginBottom: 8,
+    borderRadius: 12,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  };
+
+  const iconContainerStyle = {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.iconBackground,
+    justifyContent: "center" as const,
+    alignItems: "center" as const,
+    marginRight: 12,
+  };
+
+  const stepsTextStyle = {
+    fontSize: 18,
+    fontWeight: "600" as const,
+    color: colors.text,
+    marginBottom: 4,
+  };
+
+  const dateTextStyle = {
+    fontSize: 14,
+    color: colors.textSecondary,
+  };
+
+  const protectedTextStyle = {
+    fontSize: 12,
+    color: colors.primary,
+    marginLeft: 4,
+  };
 
   return (
     <Swipeable
@@ -120,17 +143,31 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ item, onDelete, onEdit, onA
       rightThreshold={40}
     >
       <TouchableOpacity 
-        style={dynamicStyles.activityItem}
+        style={activityItemStyle}
         onPress={() => onEdit(item)}
+        onLongPress={handleLongPress}
         activeOpacity={0.7}
+        delayLongPress={500}
       >
-        <View style={styles.contentRow}>
-          <View style={dynamicStyles.iconContainer}>
+        <View style={styles.contentContainer}>
+          <View style={iconContainerStyle}>
             <Footprints color={colors.primary} size={24} />
           </View>
-          <View style={styles.textContainer}>
-            <Text style={dynamicStyles.stepsText}>{item.steps.toLocaleString()} steps</Text>
-            <Text style={dynamicStyles.dateText}>{formatDate(item.date)}</Text>
+          
+          <View style={styles.textContent}>
+            <Text style={stepsTextStyle}>
+              {item.steps.toLocaleString()}
+              <Text style={stepsTextStyle}> steps</Text>
+            </Text>
+            <Text style={dateTextStyle}>
+              {formatDate(item.date)}
+            </Text>
+            {item.isProtected && (
+              <View style={styles.protectedContainer}>
+                <Shield size={12} color={colors.primary} />
+                <Text style={protectedTextStyle}>Protected</Text>
+              </View>
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -139,40 +176,36 @@ const ActivityItem: React.FC<ActivityItemProps> = ({ item, onDelete, onEdit, onA
 };
 
 const styles = StyleSheet.create({
-  contentRow: {
+  contentContainer: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
   },
-  textContainer: {
+  textContent: {
     flex: 1,
+    flexDirection: "column",
   },
-  deleteButton: {
+  protectedContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  actionContainer: {
+    height: '100%',
+    justifyContent: 'center',
+  },
+  actionButton: {
     justifyContent: "center",
     alignItems: "center",
     width: 80,
-    marginBottom: 8,
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
+    height: '100%',
+    borderRadius: 12,
   },
-  deleteButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  archiveButton: {
-    justifyContent: "center",
-    alignItems: "center",
-    width: 80,
-    marginBottom: 8,
-    borderTopLeftRadius: 12,
-    borderBottomLeftRadius: 12,
-    gap: 4,
-  },
-  archiveButtonText: {
+  actionButtonText: {
     color: "#fff",
     fontWeight: "600",
     fontSize: 12,
+    marginTop: 4,
   },
 });
 

@@ -32,4 +32,20 @@ export interface LoginData {
 export interface UpdateUserData {
   username?: string;
   password?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+}
+
+export interface PasswordResetRequest {
+  id: number;
+  userId: number;
+  username: string;
+  email: string;
+  requestedAt: number;
+  status: 'pending' | 'approved' | 'completed' | 'cancelled';
+  approvedBy?: number;
+  approvedAt?: number;
+  completedAt?: number;
 }

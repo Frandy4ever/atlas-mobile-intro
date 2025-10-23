@@ -11,7 +11,9 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Eye, EyeOff } from 'lucide-react-native';
+import { Eye, EyeOff, Moon, Sun } from 'lucide-react-native';
+import MaskedView from '@react-native-masked-view/masked-view';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../src/context/ThemeContext';
 import { useAuth } from '../src/context/AuthContext';
 
@@ -26,6 +28,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   
   const { colors } = useTheme();
   const { register } = useAuth();
@@ -59,52 +62,97 @@ export default function RegisterScreen() {
   };
 
   const formatPhone = (text: string) => {
-    // Remove all non-digits
     const cleaned = text.replace(/\D/g, '');
-    // Limit to 10 digits
     const limited = cleaned.slice(0, 10);
     setPhone(limited);
   };
 
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
   const toggleConfirmPasswordVisibility = () => setShowConfirmPassword(!showConfirmPassword);
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+  const isUsernameValid = /^[a-zA-Z0-9]{3,15}$/.test(username);
+
+  const bgColor = isDarkMode ? '#020617' : '#f8fafc';
+  const cardBg = isDarkMode ? '#1e293b' : '#ffffff';
+  const borderColor = isDarkMode ? '#334155' : '#e2e8f0';
+  const textColor = isDarkMode ? '#f8fafc' : '#0f172a';
+  const secondaryTextColor = isDarkMode ? '#94a3b8' : '#64748b';
+  const inputBg = isDarkMode ? '#1e293b' : '#f1f5f9';
 
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: bgColor,
     },
     scrollContent: {
       flexGrow: 1,
       padding: 20,
       justifyContent: 'center',
     },
-    title: {
-      fontSize: 32,
-      fontWeight: '700',
-      color: colors.primary,
-      textAlign: 'center',
+    themeToggle: {
+      position: 'absolute',
+      top: 50,
+      right: 20,
+      zIndex: 10,
+      backgroundColor: cardBg,
+      borderRadius: 30,
+      padding: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
+      borderWidth: 1,
+      borderColor: borderColor,
+    },
+    header: {
+      alignItems: 'center',
       marginBottom: 40,
+    },
+    logoContainer: {
+      alignItems: 'center',
+    },
+    logo: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: '#ffffff',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: 16,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      elevation: 8,
+      borderWidth: 2,
+      borderColor: '#e2e8f0',
+    },
+    appName: {
+      fontSize: 28,
+      fontWeight: '700',
+      color: '#10b981',
     },
     inputContainer: {
       position: 'relative',
       marginBottom: 16,
     },
     input: {
-      backgroundColor: colors.inputBackground,
+      backgroundColor: inputBg,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: borderColor,
       borderRadius: 8,
       padding: 16,
       fontSize: 16,
-      color: colors.text,
-      paddingRight: 50, // Space for the eye icon
+      color: textColor,
+      paddingRight: 50,
     },
     inputValid: {
-      borderColor: colors.primary, // Use primary color for valid state
+      borderColor: '#10b981',
     },
     inputInvalid: {
-      borderColor: colors.danger,
+      borderColor: '#b91c1c',
     },
     passwordToggle: {
       position: 'absolute',
@@ -113,14 +161,14 @@ export default function RegisterScreen() {
       zIndex: 1,
     },
     button: {
-      backgroundColor: colors.primary,
+      backgroundColor: '#10b981',
       padding: 16,
       borderRadius: 8,
       alignItems: 'center',
       marginBottom: 16,
     },
     buttonDisabled: {
-      backgroundColor: colors.textSecondary,
+      backgroundColor: '#475569',
     },
     buttonText: {
       color: '#fff',
@@ -133,28 +181,28 @@ export default function RegisterScreen() {
       marginTop: 20,
     },
     linkText: {
-      color: colors.textSecondary,
+      color: secondaryTextColor,
       fontSize: 16,
     },
     link: {
-      color: colors.primary,
+      color: '#3b82f6',
       fontSize: 16,
       fontWeight: '600',
       marginLeft: 4,
     },
     requirement: {
       fontSize: 12,
-      color: colors.textSecondary,
+      color: secondaryTextColor,
       marginBottom: 8,
     },
     errorText: {
       fontSize: 12,
-      color: colors.danger,
+      color: '#f87171',
       marginBottom: 8,
     },
     validText: {
       fontSize: 12,
-      color: colors.primary, // Use primary color instead of success
+      color: '#10b981',
       marginBottom: 8,
     },
     nameContainer: {
@@ -164,33 +212,62 @@ export default function RegisterScreen() {
     },
     nameInput: {
       flex: 1,
-      backgroundColor: colors.inputBackground,
+      backgroundColor: inputBg,
       borderWidth: 1,
-      borderColor: colors.border,
+      borderColor: borderColor,
       borderRadius: 8,
       padding: 16,
       fontSize: 16,
-      color: colors.text,
+      color: textColor,
     },
   });
-
-  // Validate username format
-  const isUsernameValid = /^[a-zA-Z0-9]{3,15}$/.test(username);
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Theme Toggle Button */}
+      <TouchableOpacity style={styles.themeToggle} onPress={toggleTheme}>
+        {isDarkMode ? (
+          <Sun size={24} color="#f59e0b" />
+        ) : (
+          <Moon size={24} color="#0f172a" />
+        )}
+      </TouchableOpacity>
+
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Create Account</Text>
+        <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <View style={styles.logo}>
+              <MaskedView
+                maskElement={
+                  <Text style={{ 
+                    fontSize: 48, 
+                    fontWeight: 'bold',
+                    backgroundColor: 'transparent'
+                  }}>
+                    AF
+                  </Text>
+                }
+              >
+                <LinearGradient
+                  colors={['#3b82f6', '#10b981', '#f59e0b']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{ width: 80, height: 60 }}
+                />
+              </MaskedView>
+            </View>
+            <Text style={styles.appName}>Atlas Fitness</Text>
+          </View>
+        </View>
         
-        {/* Name Fields */}
         <View style={styles.nameContainer}>
           <TextInput
             style={styles.nameInput}
             placeholder="First Name"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={secondaryTextColor}
             value={firstName}
             onChangeText={setFirstName}
             autoCapitalize="words"
@@ -199,7 +276,7 @@ export default function RegisterScreen() {
           <TextInput
             style={styles.nameInput}
             placeholder="Last Name"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={secondaryTextColor}
             value={lastName}
             onChangeText={setLastName}
             autoCapitalize="words"
@@ -210,7 +287,7 @@ export default function RegisterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={secondaryTextColor}
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -224,7 +301,7 @@ export default function RegisterScreen() {
             username.length > 0 && (isUsernameValid ? styles.inputValid : styles.inputInvalid)
           ]}
           placeholder="Username (3-15 characters, letters & numbers only)"
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={secondaryTextColor}
           value={username}
           onChangeText={setUsername}
           autoCapitalize="none"
@@ -244,7 +321,7 @@ export default function RegisterScreen() {
           <TextInput
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={secondaryTextColor}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -252,9 +329,9 @@ export default function RegisterScreen() {
           />
           <TouchableOpacity style={styles.passwordToggle} onPress={togglePasswordVisibility}>
             {showPassword ? (
-              <EyeOff size={20} color={colors.textSecondary} />
+              <EyeOff size={20} color={secondaryTextColor} />
             ) : (
-              <Eye size={20} color={colors.textSecondary} />
+              <Eye size={20} color={secondaryTextColor} />
             )}
           </TouchableOpacity>
         </View>
@@ -270,7 +347,7 @@ export default function RegisterScreen() {
               (password === confirmPassword ? styles.inputValid : styles.inputInvalid)
             ]}
             placeholder="Confirm Password"
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={secondaryTextColor}
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry={!showConfirmPassword}
@@ -278,9 +355,9 @@ export default function RegisterScreen() {
           />
           <TouchableOpacity style={styles.passwordToggle} onPress={toggleConfirmPasswordVisibility}>
             {showConfirmPassword ? (
-              <EyeOff size={20} color={colors.textSecondary} />
+              <EyeOff size={20} color={secondaryTextColor} />
             ) : (
-              <Eye size={20} color={colors.textSecondary} />
+              <Eye size={20} color={secondaryTextColor} />
             )}
           </TouchableOpacity>
         </View>
@@ -294,7 +371,7 @@ export default function RegisterScreen() {
         <TextInput
           style={styles.input}
           placeholder="Phone (10 digits)"
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={secondaryTextColor}
           value={phone}
           onChangeText={formatPhone}
           keyboardType="phone-pad"

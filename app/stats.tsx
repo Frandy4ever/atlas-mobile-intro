@@ -32,7 +32,13 @@ const StatsScreen: React.FC = () => {
     return Math.max(...recentActivities.map(act => act.steps));
   }, [recentActivities]);
 
-  // Calculate step ranges for distribution
+  // Calculate min for color coding
+  const minSteps = useMemo(() => {
+    if (recentActivities.length === 0) return 0;
+    return Math.min(...recentActivities.map(act => act.steps));
+  }, [recentActivities]);
+
+  // Calculate step ranges for distribution with color coding
   const distribution = useMemo(() => {
     const ranges = {
       low: 0,
@@ -41,7 +47,7 @@ const StatsScreen: React.FC = () => {
       veryHigh: 0,
     };
 
-    activities.forEach(act => {
+    activities.forEach((act: any) => {
       if (act.steps <= 2000) ranges.low++;
       else if (act.steps <= 5000) ranges.medium++;
       else if (act.steps <= 10000) ranges.high++;
@@ -49,13 +55,35 @@ const StatsScreen: React.FC = () => {
     });
 
     const total = activities.length || 1;
+    
+    // Use the same color coding: lowest red, highest green, rest blue
     return [
-      { label: "0-2K", count: ranges.low, percent: (ranges.low / total) * 100, color: "#FF6B6B" },
-      { label: "2K-5K", count: ranges.medium, percent: (ranges.medium / total) * 100, color: "#4ECDC4" },
-      { label: "5K-10K", count: ranges.high, percent: (ranges.high / total) * 100, color: "#45B7D1" },
-      { label: "10K+", count: ranges.veryHigh, percent: (ranges.veryHigh / total) * 100, color: "#96CEB4" },
+      { 
+        label: "0-2K", 
+        count: ranges.low, 
+        percent: (ranges.low / total) * 100, 
+        color: colors.danger // Red for lowest range
+      },
+      { 
+        label: "2K-5K", 
+        count: ranges.medium, 
+        percent: (ranges.medium / total) * 100, 
+        color: "#45B7D1" // Blue for medium
+      },
+      { 
+        label: "5K-10K", 
+        count: ranges.high, 
+        percent: (ranges.high / total) * 100, 
+        color: "#45B7D1" // Blue for high
+      },
+      { 
+        label: "10K+", 
+        count: ranges.veryHigh, 
+        percent: (ranges.veryHigh / total) * 100, 
+        color: colors.primary // Green for highest range
+      },
     ].filter(item => item.count > 0);
-  }, [activities]);
+  }, [activities, colors]);
 
   const styles = StyleSheet.create({
     container: {
@@ -139,7 +167,6 @@ const StatsScreen: React.FC = () => {
     },
     bar: {
       width: "100%",
-      backgroundColor: colors.primary,
       borderTopLeftRadius: 4,
       borderTopRightRadius: 4,
       minHeight: 4,
@@ -243,7 +270,7 @@ const StatsScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* Bar Chart - Recent Activities */}
+      {/* Bar Chart - Recent Activities with Color Coding */}
       {recentActivities.length > 0 && (
         <View style={styles.chartContainer}>
           <Text style={styles.chartTitle}>Recent Activities</Text>
@@ -253,10 +280,24 @@ const StatsScreen: React.FC = () => {
               const date = new Date(activity.date * 1000);
               const dateLabel = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
               
+              // Color coding: lowest red, highest green, rest blue
+              const barColor = 
+                activity.steps === minSteps ? colors.danger : 
+                activity.steps === maxSteps ? colors.primary : 
+                "#45B7D1";
+              
               return (
                 <View key={index} style={styles.barWrapper}>
                   <Text style={styles.barValue}>{(activity.steps / 1000).toFixed(1)}K</Text>
-                  <View style={[styles.bar, { height: `${Math.max(heightPercent, 2)}%` }]} />
+                  <View 
+                    style={[
+                      styles.bar, 
+                      { 
+                        height: `${Math.max(heightPercent, 2)}%`,
+                        backgroundColor: barColor
+                      }
+                    ]} 
+                  />
                   <Text style={styles.barLabel}>{dateLabel}</Text>
                 </View>
               );
@@ -265,7 +306,7 @@ const StatsScreen: React.FC = () => {
         </View>
       )}
 
-      {/* Distribution */}
+      {/* Distribution with Color Coding */}
       {distribution.length > 0 && (
         <View style={styles.chartContainer}>
           <Text style={styles.chartTitle}>Activity Distribution</Text>

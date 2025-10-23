@@ -1,6 +1,6 @@
 import React from "react";
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import { Sun, Moon, Palette } from "lucide-react-native";
+import { Sun, Moon, Palette, Sparkles, Star } from "lucide-react-native";
 import { useTheme, type Theme } from "../context/ThemeContext";
 
 interface ThemeSelectorProps {
@@ -116,6 +116,28 @@ const ThemeSelector: React.FC<ThemeSelectorProps> = ({ visible, onClose }) => {
             <View style={styles.themeInfo}>
               <Text style={styles.themeName}>Warm</Text>
               <Text style={styles.themeDescription}>Cozy and inviting</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.themeOption, theme === "cyberberry" && styles.themeOptionSelected]}
+            onPress={() => handleThemeSelect("cyberberry")}
+          >
+            <Sparkles color={colors.text} size={24} style={styles.themeIcon} />
+            <View style={styles.themeInfo}>
+              <Text style={styles.themeName}>Cyberberry</Text>
+              <Text style={styles.themeDescription}>Vibrant and modern</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.themeOption, theme === "stargazer" && styles.themeOptionSelected]}
+            onPress={() => handleThemeSelect("stargazer")}
+          >
+            <Star color={colors.text} size={24} style={styles.themeIcon} />
+            <View style={styles.themeInfo}>
+              <Text style={styles.themeName}>Stargazer</Text>
+              <Text style={styles.themeDescription}>Calm and serene</Text>
             </View>
           </TouchableOpacity>
 
